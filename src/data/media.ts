@@ -76,11 +76,13 @@ export const media = {
   heroAerial: photo('DJI_20261001133743_0632_D.jpg', 'Aerial view down a long lawn framed by palms to the three-level octagonal home', {
     caption: 'The residence at the head of the lawn', focus: '50% 56%',
   }),
+  // Square centre crop of heroAerial (tools/build-media.mjs) for portrait phones.
+  heroPhone: { ...still('hero-phone.jpg', 'Aerial view down a long lawn framed by palms to the three-level octagonal home'), source: 'drone' },
   architectureAerial: photo('DJI_20261001133625_0617_D.jpg', 'Elevated view of the octagonal three-level home with stacked lanais, red ti and tall pines', {
     caption: 'Three stacked levels, three lanais', focus: '47% 45%',
   }),
-  frontElevation: photo('C04A4635.jpg', 'Front elevation of the octagonal tri-level home above a lawn bordered with red ti', {
-    caption: 'Front elevation', focus: '58% 45%',
+  frontElevation: photo('C04A4635.jpg', 'Front elevation of the octagonal three-level home: a covered lanai at garden level, the wraparound lanai above it and the top-floor lanai', {
+    caption: 'Three lanais, one on every level', focus: '48% 40%',
   }),
   entry: photo('C04A4658.jpg', 'Glass-paned entry doors flanked by anthuriums', { caption: 'Entry', focus: '50% 50%' }),
   approach: photo('C04A4596.jpg', 'Palms and tropical trees along the approach to the property', { caption: 'The approach', focus: '50% 60%' }),
@@ -102,7 +104,9 @@ export const media = {
   familyMedia: photo('C04A4948.jpg', 'Family room set up with a projector screen', { caption: 'Family room' }),
 
   // Garden level (level 1)
-  gardenLiving: photo('C04A4729.jpg', 'Garden-level living room with French doors to the garden', { caption: 'Garden-level living room' }),
+  gardenLiving: photo('C04A4729.jpg', 'Garden-level living room with French doors open to the covered lanai and garden', {
+    caption: 'Garden-level living room, open to the covered lanai', focus: '45% 55%',
+  }),
   gardenLiving2: photo('C04A4739.jpg', 'Garden-level living room with tile floors and garden views', { caption: 'Garden-level living room' }),
   gardenBath: photo('C04A4749.jpg', 'Garden-level full bath with glass shower', { caption: 'Garden-level bath' }),
   flexRoom: photo('C04A4764.jpg', 'Garden-level bedroom arranged with a bed and a work desk beside sliding doors to the garden', {
@@ -119,7 +123,9 @@ export const media = {
   lanaiRockers: photo('C04A4975.jpg', 'Rocking chairs on the upper wraparound lanai above the palms', {
     caption: 'Morning coffee on the wraparound lanai', focus: '50% 50%',
   }),
-  lanaiTopView: photo('C04A4851.jpg', 'View from the top-floor lanai over the front lawn and grounds', { caption: 'From the top-floor lanai' }),
+  lanaiTopView: photo('C04A4851.jpg', 'The top-floor lanai off the primary suite, looking over the front lawn and grounds', {
+    caption: 'Top-floor lanai, off the primary suite', focus: '50% 55%',
+  }),
 
   // Primary retreat (level 3)
   primaryBedroom: photo('C04A4806.jpg', 'Top-floor primary bedroom wrapped in windows, with sliding doors to its lanai', {
@@ -165,8 +171,8 @@ export const media = {
   contextInland: photo('DJI_20261001134233_0716_D.jpg', 'Aerial view across the treetops of Hawaiian Paradise Park', { caption: 'Hawaiian Paradise Park' }),
   aerialSite: photo('DJI_20261001133658_0627_D.jpg', 'Aerial view of the house, lawn, solar array and water catchment tank', { caption: 'The site from above' }),
   filmOcean: still('film-ocean-aerial.jpg', 'Aerial view over treetops toward the Pacific Ocean', { caption: 'Toward the ocean', focus: '50% 50%' }),
-  filmPoster: still('film-poster-residence.jpg', 'Aerial view of the octagonal residence among tall pines, from the property film', {
-    caption: 'From the property film', focus: '45% 50%',
+  filmPoster: still('film-poster-v2.jpg', 'Aerial view of the octagonal residence among tall pines, from the property film', {
+    caption: 'From the property film', focus: '50% 50%',
   }),
 
   // Kaloli Point coastline (owner photos; the honu shots carry GPS on the Kaloli Point shore)
@@ -181,9 +187,9 @@ export const media = {
   }),
 
   // Evenings (owner photographs from the public listing)
-  sunsetHouse: owner('listing-sunset-house.jpg', 'The house beneath a pink and violet sunset sky, with hibiscus in the foreground', { caption: 'Island evenings', focus: '50% 55%' }),
-  sunsetYard: owner('listing-sunset-yard.jpg', 'Sunset colors over the palms and garden', { caption: 'Sunset over the garden', focus: '50% 40%' }),
-  nightSky: owner('listing-night-sky.jpg', 'The Milky Way above the illuminated house at night', { caption: 'Star-filled skies', focus: '50% 35%' }),
+  sunsetHouse: owner('listing-sunset-house.jpg', 'The house beneath a pink and violet sky at dusk, with hibiscus in the foreground', { caption: 'Dusk over the house', focus: '56% 45%' }),
+  sunsetYard: owner('listing-sunset-yard.jpg', 'Sunset clouds and a crescent moon over the lawn, palms and red ti', { caption: 'Sunset over the garden', focus: '50% 40%' }),
+  nightSky: owner('listing-night-sky.jpg', 'The Milky Way above the illuminated house at night', { caption: 'The Milky Way above the house', focus: '50% 35%' }),
 } satisfies Record<string, MediaItem>;
 
 export const floorPlans = {

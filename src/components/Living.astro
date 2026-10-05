@@ -5,45 +5,94 @@ import Photo from './Photo.astro';
 import ShowingButton from './ShowingButton.astro';
 import { media } from '../data/media';
 import { property } from '../data/property';
+import { lightbox } from '../lib/images';
 import { SIZES } from '../lib/sizes';
 const r = property.renovation;
+
+// The front elevation proves the three lanais: each is pinned where it sits on the facade. Pins are given in
+// image percentages and mapped through the frame's crop (16:9 from tablets up, 4:5 on phones; object-position
+// FOCUS), so they stay on the right railing at every width.
+const FOCUS = { x: 48, y: 40 };
+const IMG = media.frontElevation.src;
+const visH = 9 / 16 / (IMG.height / IMG.width);
+const visW = (4 / 5) * (IMG.height / IMG.width);
+const LANAIS = [
+  { n: '03', name: 'Top-floor lanai', level: 'Primary retreat', at: { x: 61, y: 29 }, item: media.lanaiTopView, note: 'Private to the primary suite, looking over the front lawn.' },
+  { n: '02', name: 'Wraparound lanai', level: 'Living level', at: { x: 59.5, y: 41.5 }, item: media.lanaiFurnished, note: 'Off the kitchen and family room, with seating and a grill.' },
+  { n: '01', name: 'Covered lanai', level: 'Garden level', at: { x: 57, y: 50 }, item: media.lanaiCovered, note: 'Sheltered beneath the living floor, open to the lawn · 34′0″ × 31′6″.' },
+].map((l) => ({
+  ...l,
+  desk: { x: l.at.x, y: (l.at.y - (1 - visH) * FOCUS.y) / visH },
+  phone: { x: (l.at.x - (1 - visW) * FOCUS.x) / visW, y: l.at.y },
+}));
+const facade = await lightbox(media.frontElevation);
+const pct = (v: number) => `${v.toFixed(2)}%`;
 ---
 
 <section class="section living" id="lanais" aria-labelledby="lanais-title">
-  <!-- 1 · Indoor-outdoor living -->
+  <!-- 1 · Three lanais, one on every level -->
   <div class="container grid-12 head">
     <div class="head-title">
       <p class="eyebrow" data-reveal>Indoor · outdoor</p>
-      <h2 class="display display--lg" id="lanais-title" data-reveal>Three lanais. <em>Live outside.</em></h2>
+      <h2 class="display display--lg" id="lanais-title" data-reveal>Three lanais. <em>One on every level.</em></h2>
     </div>
-    <p class="lede head-sub" data-reveal>Three spacious lanais extend the home's living experience into the tropical surroundings.</p>
+    <p class="lede head-sub" data-reveal>Covered at the garden, wrapping the living floor, and private at the top.</p>
   </div>
 
-  <Zoomable
-    item={media.lanaiFurnished}
-    gallery="lanais"
-    class="bleed"
-    frameClass="bleed-frame"
-    sizes={SIZES.bleed3x2}
-    parallax
-    data-reveal-image
-  />
+  <figure class="facade" data-reveal-image>
+    <a
+      class="zoomable frame facade-frame"
+      href={facade.href}
+      data-pswp-src={facade.href}
+      data-pswp-srcset={facade.srcset}
+      data-pswp-width={facade.width}
+      data-pswp-height={facade.height}
+      data-pswp-caption={media.frontElevation.caption}
+      data-gallery="lanais"
+      aria-label={`Open image: ${media.frontElevation.alt}`}
+    >
+      <Photo item={media.frontElevation} focus={`${FOCUS.x}% ${FOCUS.y}%`} sizes="(max-width: 767px) 188vw, 100vw" />
+      <ol class="pins" aria-hidden="true">
+        {LANAIS.map((l) => (
+          <li
+            class="pin"
+            style={`--dx:${pct(l.desk.x)};--dy:${pct(l.desk.y)};--px:${pct(l.phone.x)};--py:${pct(l.phone.y)}`}
+          >
+            <span class="pin-dot">{l.n}</span>
+            <span class="pin-line"></span>
+            <span class="pin-label"><b>{l.n}</b> {l.name}</span>
+          </li>
+        ))}
+      </ol>
+    </a>
+    <figcaption class="container caption">
+      The front elevation: 01 the covered lanai, 02 the wraparound lanai and 03 the top-floor lanai, stacked one above another.
+    </figcaption>
+  </figure>
 
-  <div class="container grid-12 lanai-pair">
-    <div class="lanai-copy">
-      <p class="display display--sm">
-        The upper wraparound lanai is made for morning coffee, yoga and entertaining — with gentle breezes and the garden below.
-      </p>
-      <ShowingButton origin="lanais" class="text-link soft" label="Experience the lanais in person" />
-    </div>
-    <Zoomable item={media.lanaiRockers} gallery="lanais" class="lanai-detail" frameClass="ar-4x5" sizes={SIZES.fourCols} focus="42% 50%" />
+  <ol class="container lanai-views" role="list" aria-label="The three lanais">
+    {[...LANAIS].reverse().map((l) => (
+      <li class="view">
+        <Zoomable item={l.item} gallery="lanais" frameClass="view-frame" sizes="(min-width: 768px) 56vw, 92vw" caption={false} />
+        <p class="view-level"><span class="view-n">{l.n}</span> {l.level}</p>
+        <h3 class="view-name">{l.name}</h3>
+        <p class="view-note">{l.note}</p>
+      </li>
+    ))}
+  </ol>
+
+  <div class="container lanai-cta">
+    <p class="display display--sm">
+      The upper wraparound lanai is made for morning coffee, yoga and entertaining — with gentle breezes and the garden below.
+    </p>
+    <ShowingButton origin="lanais" class="text-link soft" label="Experience the lanais in person" />
   </div>
 
   <!-- 2 · Renovated kitchen and primary suite -->
   <div class="container grid-12 interiors" id="interiors">
     <div class="interiors-head">
       <p class="eyebrow" data-reveal>Renovated in {r.year}</p>
-      <h3 class="display display--md" data-reveal>A kitchen and primary suite, made new.</h3>
+      <h2 class="display display--md" data-reveal>A kitchen and primary suite, made new.</h2>
     </div>
     <Zoomable item={media.kitchenWide} gallery="interiors" class="kitchen" frameClass="ar-3x2" sizes={SIZES.eightCols} data-reveal-image />
     <div class="interiors-copy body-copy">
@@ -60,7 +109,7 @@ const r = property.renovation;
     <ul class="reno-groups" role="list" aria-label={`${r.year} renovation`}>
       {r.groups.map((g) => (
         <li>
-          <h4 class="reno-title">{g.title}</h4>
+          <h3 class="reno-title">{g.title}</h3>
           <p class="reno-summary">{g.summary}</p>
         </li>
       ))}
@@ -88,7 +137,7 @@ const r = property.renovation;
     <div class="grounds-shade" aria-hidden="true"></div>
     <div class="container grounds-copy on-photo">
       <p class="eyebrow" data-reveal>The half acre</p>
-      <h3 class="display display--xl" data-reveal>A private tropical half acre.</h3>
+      <h2 class="display display--xl" data-reveal>A private tropical half acre.</h2>
       <p class="lede" data-reveal>
         Mature palms, ornamentals and established fruit trees screen the grounds, enclosed by more than
         {property.facts.rockWallFeet} feet of rock wall and fencing.
@@ -122,20 +171,94 @@ const r = property.renovation;
     .head-sub { grid-column: 8 / -1; padding-bottom: 0.75rem; }
   }
 
-  .bleed :global(.bleed-frame) { height: clamp(26rem, 80vh, 56rem); }
-  .bleed :global(.caption) { width: min(100% - 2 * var(--gutter), var(--maxw)); margin-inline: auto; }
+  .facade-frame { display: block; aspect-ratio: 16 / 9; }
+  @media (hover: hover) {
+    /* No hover zoom here: the pins must stay on their railings. */
+    .facade .zoomable:hover :global(img) { transform: none; }
+  }
+  .pins { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+  .pin-dot {
+    position: absolute;
+    left: var(--dx);
+    top: var(--dy);
+    width: 0.85rem;
+    height: 0.85rem;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--bronze-light);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 65%, transparent);
+    font-size: 0;
+  }
+  .pin-line {
+    position: absolute;
+    left: var(--dx);
+    top: var(--dy);
+    width: calc(66% - var(--dx));
+    height: 1px;
+    background: var(--ink);
+    box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--ivory) 60%, transparent);
+  }
+  .pin-label {
+    position: absolute;
+    left: 66%;
+    top: var(--dy);
+    transform: translateY(-50%);
+    padding: 0.5rem 0.85rem;
+    background: var(--ink);
+    color: var(--ivory);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pin-label b { font-family: var(--font-serif); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.02em; color: var(--bronze-light); margin-right: 0.35rem; }
   @media (max-width: 767px) {
-    .bleed :global(.bleed-frame) { height: auto; aspect-ratio: 4 / 3; }
+    /* Phones: a 4:5 crop, numbered pins only; the three views below are the legend. */
+    .facade-frame { aspect-ratio: 4 / 5; }
+    .pin-line, .pin-label { display: none; }
+    .pin-dot {
+      left: var(--px);
+      top: var(--py);
+      width: 1.6rem;
+      height: 1.6rem;
+      display: grid;
+      place-items: center;
+      background: var(--ink);
+      border: 1px solid var(--bronze-light);
+      box-shadow: none;
+      font-family: var(--font-serif);
+      font-size: 0.8rem;
+      color: var(--ivory);
+    }
   }
 
-  .lanai-pair { margin-top: clamp(3rem, 6vw, 5rem); row-gap: 2.5rem; align-items: end; }
-  .lanai-copy { grid-column: 1 / -1; display: grid; gap: 1.75rem; justify-items: start; }
-  .lanai-copy .display--sm { max-width: 26ch; }
-  .lanai-detail { grid-column: 4 / -1; }
-  @media (min-width: 1000px) {
-    .lanai-copy { grid-column: 1 / span 6; padding-bottom: 3rem; }
-    .lanai-detail { grid-column: 8 / -1; }
+  .lanai-views {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+    display: grid;
+    gap: 2.5rem clamp(1rem, 2.5vw, 2rem);
   }
+  @media (min-width: 768px) {
+    .lanai-views { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  .view :global(.view-frame) { aspect-ratio: 4 / 5; }
+  @media (max-width: 767px) {
+    .view :global(.view-frame) { aspect-ratio: 3 / 2; }
+  }
+  .view-level {
+    margin-top: 1rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--moss-deep);
+  }
+  .view-n { font-family: var(--font-serif); font-size: 1.05rem; letter-spacing: 0.02em; color: var(--bronze-deep); margin-right: 0.3rem; }
+  .view-name { margin-top: 0.35rem; font-family: var(--font-serif); font-weight: 400; font-size: var(--step-2); line-height: 1.1; color: var(--ink); }
+  .view-note { margin-top: 0.5rem; max-width: 36ch; font-size: var(--step--1); color: var(--charcoal); }
+
+  .lanai-cta { margin-top: clamp(3rem, 6vw, 4.5rem); display: grid; gap: 1.75rem; justify-items: start; }
+  .lanai-cta .display--sm { max-width: 32ch; }
 
   .soft { color: var(--forest); }
   .soft :global(svg) { width: 0.95rem; height: 0.95rem; }

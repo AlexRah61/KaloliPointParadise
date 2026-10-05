@@ -1,0 +1,127 @@
+---
+import Photo from './Photo.astro';
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+
+// Light to night, in the owners' photographs: daylight and sunset as a pair, dusk full-bleed, then the Milky Way
+// as the closing image. The night frame is only 896px wide, so it is shown at its own proportions on a matching
+// dark field, feathered into it, never stretched or cropped.
+const PAIR = [
+  { n: '01', time: 'Daylight', item: media.rainbow, sizes: '(min-width: 1000px) 36vw, (min-width: 768px) 40vw, 92vw' },
+  { n: '02', time: 'Sunset', item: media.sunsetYard, sizes: '(min-width: 1000px) 45vw, (min-width: 768px) 48vw, 92vw' },
+];
+---
+
+<section class="evenings on-dark" id="evenings" aria-labelledby="evenings-title">
+  <div class="section-top container grid-12 head">
+    <div class="head-title">
+      <p class="eyebrow" data-reveal>Light to night</p>
+      <h2 class="display display--lg" id="evenings-title" data-reveal>From rainbows <em>to the Milky Way.</em></h2>
+    </div>
+    <p class="lede head-sub" data-reveal>From a passing shower to a clear night sky, photographed at the house by the owners.</p>
+  </div>
+
+  <ol class="container pair" role="list">
+    {PAIR.map((p) => (
+      <li class="moment">
+        <p class="time"><span class="time-n">{p.n}</span> {p.time}</p>
+        <Zoomable item={p.item} gallery="evenings" frameClass="moment-frame" sizes={p.sizes} />
+      </li>
+    ))}
+  </ol>
+
+  <figure class="dusk">
+    <div class="dusk-frame">
+      <Photo item={media.sunsetHouse} sizes="(max-width: 767px) 167vw, 100vw" />
+    </div>
+    <figcaption class="container dusk-cap">
+      <span class="time"><span class="time-n">03</span> Dusk</span>
+      <span class="dusk-line">The house beneath a pink and violet sky, with hibiscus in the garden.</span>
+    </figcaption>
+  </figure>
+
+  <div class="night">
+    <div class="container night-grid">
+      <div class="night-media">
+        <Photo item={media.nightSky} sizes="(min-width: 900px) calc(88vh * 0.75), (max-height: 500px) calc(88vh * 0.75), 100vw" />
+      </div>
+      <div class="night-copy">
+        <p class="time"><span class="time-n">04</span> Night</p>
+        <h3 class="display display--lg night-title">When the sky <em>takes over.</em></h3>
+        <p class="night-line">{media.nightSky.caption}. An owner photograph.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .evenings { --night: #0a0e0f; background: var(--ink); color: var(--stone); }
+  .section-top { padding-top: var(--section-y); }
+  .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.25rem; max-width: 14ch; }
+  .head-sub { grid-column: 1 / -1; max-width: 30ch; }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 7; }
+    .head-sub { grid-column: 8 / -1; padding-bottom: 0.75rem; }
+  }
+
+  .time {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ivory);
+  }
+  .time-n { font-family: var(--font-serif); font-size: 1.05rem; font-weight: 400; letter-spacing: 0.02em; color: var(--bronze-light); }
+
+  /* Daylight and sunset, both portrait: an offset pair rather than a grid. */
+  .pair { display: grid; gap: 3rem clamp(1.5rem, 4vw, 4rem); padding-bottom: clamp(4rem, 8vw, 7rem); }
+  .moment { display: grid; gap: 0.9rem; align-content: start; }
+  .moment :global(.moment-frame) { aspect-ratio: 3 / 4; }
+  @media (min-width: 768px) {
+    .pair { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
+    .moment:nth-child(2) { margin-top: clamp(4rem, 9vw, 8rem); }
+  }
+  @media (min-width: 1000px) {
+    .pair { grid-template-columns: minmax(0, 4fr) minmax(0, 5fr); padding-inline: 0 clamp(0rem, 6vw, 6rem); }
+  }
+
+  .dusk { position: relative; }
+  .dusk-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; max-height: 100vh; max-height: 100svh; width: 100%; }
+  .dusk-frame :global(picture), .dusk-frame :global(img) { width: 100%; height: 100%; }
+  .dusk-frame :global(img) { object-fit: cover; }
+  @media (max-width: 767px) {
+    .dusk-frame { aspect-ratio: 4 / 5; }
+  }
+  .dusk-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; padding-top: 1.1rem; }
+  .dusk-line { font-size: var(--step--1); color: var(--sand); }
+
+  /* The closing image: a deep field matched to the photograph's own sky, the frame feathered into it. */
+  .night {
+    margin-top: clamp(4rem, 8vw, 7rem);
+    padding-block: clamp(3rem, 6vw, 5rem) clamp(5rem, 10vw, 8rem);
+    background: linear-gradient(180deg, var(--ink) 0%, var(--night) 18%, var(--night) 82%, var(--ink) 100%);
+  }
+  .night-grid { display: grid; gap: clamp(2rem, 5vw, 4rem); align-items: center; justify-items: center; }
+  .night-media {
+    width: min(100%, 34rem);
+    aspect-ratio: 896 / 1195;
+    -webkit-mask-image: radial-gradient(ellipse 74% 76% at 50% 46%, #000 62%, transparent 100%);
+    mask-image: radial-gradient(ellipse 74% 76% at 50% 46%, #000 62%, transparent 100%);
+  }
+  .night-media :global(picture), .night-media :global(img) { width: 100%; height: 100%; }
+  .night-media :global(img) { object-fit: contain; }
+  .night-copy { display: grid; gap: 1.25rem; justify-items: center; text-align: center; }
+  .night-title { max-width: 11ch; color: var(--white); }
+  .night-line { max-width: 30ch; color: var(--stone); }
+  @media (min-width: 900px), (max-height: 500px) and (min-width: 560px) {
+    .night-grid { grid-template-columns: auto minmax(0, 1fr); justify-items: start; }
+    /* As tall as the screen allows, at the photograph's own proportions, leaving room for the words beside it. */
+    .night-media { width: auto; height: min(88vh, 1195px, 73vw); height: min(88svh, 1195px, 73vw); }
+    .night-copy { justify-items: start; text-align: left; }
+  }
+</style>

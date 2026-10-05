@@ -83,6 +83,9 @@ test.describe('analytics (GA4)', () => {
     }));
     expect(timing.gaAt, 'gtag.js is injected only after the load event').toBeGreaterThanOrEqual(timing.loadEnd);
     expect((await dataLayer(page)).find((a) => a[0] === 'config')?.[1]).toBe(FAKE_ID);
+    expect((await dataLayer(page)).filter((a) => a[0] === 'config'), 'exactly one Google tag configuration').toHaveLength(1);
+    expect(await page.locator('script[src*="googletagmanager.com"]').count(), 'one gtag.js, no Tag Manager container').toBe(1);
+    expect(await page.locator('script[src*="googletagmanager.com/gtm.js"]').count()).toBe(0);
     expect(await gaEvents(page, 'property_view')).toHaveLength(1);
 
     await page.evaluate(() => window.scrollTo(0, document.getElementById('lanais')!.offsetTop));

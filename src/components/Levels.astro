@@ -1,16 +1,18 @@
 ---
-import { ChevronDown } from '@lucide/astro';
+import { ChevronDown, Expand } from '@lucide/astro';
 import Zoomable from './Zoomable.astro';
 import { media, floorPlans } from '../data/media';
 import { property } from '../data/property';
-import { SIZES } from '../lib/sizes';
+import { lightbox } from '../lib/images';
 
-// One strong photograph per level; the kitchen and primary bath are saved for the next chapter.
+// Each level: one strong photograph, its plan beside it, and the rooms with their measured dimensions. The kitchen
+// and primary bath are saved for the next chapter.
 const LEVELS = {
-  'level-1': { photo: media.flexRoom, plan: floorPlans.level1, dim: floorPlans.level1Dim },
+  'level-1': { photo: media.gardenLiving, plan: floorPlans.level1, dim: floorPlans.level1Dim },
   'level-2': { photo: media.familyRoom, plan: floorPlans.level2, dim: floorPlans.level2Dim },
   'level-3': { photo: media.primaryBedroom, plan: floorPlans.level3, dim: floorPlans.level3Dim },
 } as const;
+const allPlans = await lightbox(floorPlans.allDim);
 ---
 
 <section class="section levels" id="levels" aria-labelledby="levels-title">
@@ -46,32 +48,52 @@ const LEVELS = {
       {property.levels.map((lvl) => {
         const l = LEVELS[lvl.id as keyof typeof LEVELS];
         return (
-          <article class="panel grid-12" id={lvl.id} aria-labelledby={`${lvl.id}-name`} data-level-panel>
-            <Zoomable item={l.photo} gallery="levels" class="panel-photo" frameClass="ar-3x2" sizes={SIZES.eightCols} />
-            <div class="panel-text">
+          <article class="panel" id={lvl.id} aria-labelledby={`${lvl.id}-name`} data-level-panel>
+            <div class="p-title">
               <p class="level-num" aria-hidden="true">{lvl.number}</p>
-              <h3 class="level-name" id={`${lvl.id}-name`}>{lvl.name}</h3>
-              <p class="level-summary">{lvl.summary}</p>
-              <Zoomable
-                item={l.plan}
-                zoomItem={l.dim}
-                gallery="plans"
-                class="plan"
-                frameClass="plan-frame"
-                sizes="(min-width: 1000px) 22vw, 60vw"
-                caption="Floor plan · open with dimensions"
-              />
-              <details class="drawer">
-                <summary>Room dimensions <ChevronDown aria-hidden="true" /></summary>
-                <ul class="rooms" role="list">
-                  {lvl.rooms.map((r) => <li>{r}</li>)}
-                </ul>
-              </details>
+              <div>
+                <h3 class="level-name" id={`${lvl.id}-name`}>{lvl.name}</h3>
+                <p class="level-summary">{lvl.summary}</p>
+              </div>
             </div>
+            <Zoomable item={l.photo} gallery="levels" class="p-photo" frameClass="ar-3x2" sizes="(min-width: 1000px) 56vw, 100vw" />
+            <ul class="rooms" role="list" aria-label={`Rooms on the ${lvl.name.toLowerCase()}`}>
+              {lvl.rooms.map((r) => {
+                const [room, dim] = r.split(' · ');
+                return (
+                  <li>
+                    <span class="room">{room}</span>
+                    {dim && <span class="dim">{dim}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+            <Zoomable
+              item={l.plan}
+              zoomItem={l.dim}
+              gallery="plans"
+              class="p-plan"
+              frameClass="plan-frame"
+              sizes="(min-width: 1000px) 38vw, 92vw"
+              caption={`${lvl.name} floor plan · open for dimensions`}
+            />
           </article>
         );
       })}
     </div>
+
+    <a
+      class="text-link all-plans"
+      href={allPlans.href}
+      data-pswp-src={allPlans.href}
+      data-pswp-srcset={allPlans.srcset}
+      data-pswp-width={allPlans.width}
+      data-pswp-height={allPlans.height}
+      data-pswp-caption={floorPlans.allDim.caption}
+      data-gallery="plans"
+    >
+      <Expand aria-hidden="true" /> All three floor plans, with dimensions
+    </a>
 
     <details class="drawer specs">
       <summary>Property specifications <ChevronDown aria-hidden="true" /></summary>
@@ -116,7 +138,7 @@ const LEVELS = {
     min-height: 44px;
     padding: 0.85rem 0 1rem;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-bottom: 3px solid transparent;
     margin-bottom: -1px;
     background: none;
     font-size: 0.74rem;
@@ -128,7 +150,16 @@ const LEVELS = {
   }
   .tab-num { font-family: var(--font-serif); font-size: 1.05rem; letter-spacing: 0; color: var(--bronze-deep); }
   .tab:hover { color: var(--ink); }
-  .tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--bronze); }
+  /* The selected level reads at a glance: ink type, a heavy bronze rule and a faint wash behind it. */
+  .tab[aria-selected='true'] {
+    color: var(--ink);
+    border-bottom-color: var(--bronze);
+    background: linear-gradient(0deg, color-mix(in srgb, var(--bronze) 12%, transparent), transparent 80%);
+  }
+  .tab[aria-selected='true'] .tab-num { color: var(--bronze-deep); }
+  @media (min-width: 640px) {
+    .tab { padding-inline: 0.85rem; }
+  }
   /* Phones: three equal columns, number above name, so no level is cut off at the edge. */
   @media (max-width: 639px) {
     .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; overflow: visible; }
@@ -137,21 +168,37 @@ const LEVELS = {
   }
 
   .panels { display: grid; gap: clamp(3.5rem, 7vw, 5rem); }
-  .panel { row-gap: 2rem; align-items: start; }
+  .panel { display: grid; gap: 1.5rem; align-items: start; }
   .panel[hidden] { display: none; }
-  .panel-photo { grid-column: 1 / -1; }
-  .panel-text { grid-column: 1 / -1; display: grid; gap: 1.1rem; align-content: start; }
-  @media (min-width: 1000px) {
-    .panel-photo { grid-column: 1 / span 8; }
-    .panel-text { grid-column: 9 / -1; }
-  }
+  .p-title { display: flex; gap: 1.1rem; align-items: baseline; }
   .level-num { font-family: var(--font-serif); font-size: 3rem; line-height: 1; color: var(--bronze); }
   .level-name { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-3); line-height: 1; color: var(--ink); }
-  .level-summary { color: var(--charcoal); max-width: 40ch; }
+  .level-summary { margin-top: 0.75rem; color: var(--charcoal); max-width: 46ch; }
 
-  .plan { margin-top: 0.5rem; width: min(100%, 17rem); }
-  .plan :global(.plan-frame) { aspect-ratio: 1 / 1; background: var(--white); padding: 0.9rem; border: var(--rule); }
-  .plan :global(.plan-frame img) { object-fit: contain; }
+  .p-plan :global(.plan-frame) { aspect-ratio: 1 / 1; background: var(--white); padding: clamp(0.75rem, 2vw, 1.5rem); border: var(--rule); }
+  .p-plan :global(.plan-frame img) { object-fit: contain; }
+
+  .rooms { display: grid; font-size: var(--step--1); color: var(--charcoal); border-top: var(--rule); }
+  .rooms li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 9%, transparent); }
+  .room { color: var(--ink); }
+  .dim { font-variant-numeric: lining-nums tabular-nums; color: var(--bronze-deep); white-space: nowrap; }
+
+  @media (min-width: 1000px) {
+    /* Photograph and plan side by side at the same height; rooms beside the description. */
+    .panel {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      grid-template-areas: 'title rooms' 'photo plan';
+      gap: 2rem clamp(1.5rem, 2.5vw, 2.5rem);
+    }
+    .p-title { grid-area: title; }
+    .rooms { grid-area: rooms; align-self: end; }
+    .p-photo { grid-area: photo; }
+    .p-plan { grid-area: plan; align-self: stretch; display: flex; flex-direction: column; }
+    .p-plan :global(.plan-frame) { flex: 1; aspect-ratio: auto; min-height: 0; }
+  }
+
+  .all-plans { display: inline-flex; align-items: center; gap: 0.6rem; margin-top: clamp(2rem, 4vw, 3rem); color: var(--forest); }
+  .all-plans :global(svg) { width: 0.95rem; height: 0.95rem; }
 
   .drawer { border-top: var(--rule); }
   .drawer summary {
@@ -172,11 +219,8 @@ const LEVELS = {
   .drawer summary::-webkit-details-marker { display: none; }
   .drawer summary :global(svg) { width: 1rem; height: 1rem; flex: none; color: var(--bronze-deep); transition: transform 0.3s var(--ease); }
   .drawer[open] summary :global(svg) { transform: rotate(180deg); }
-  .rooms { display: grid; gap: 0.45rem; padding-bottom: 1rem; font-size: var(--step--1); color: var(--charcoal); }
-  .rooms li { display: flex; gap: 0.75rem; }
-  .rooms li::before { content: ''; flex: 0 0 0.9rem; height: 1px; background: var(--bronze); transform: translateY(0.8em); }
 
-  .specs { margin-top: clamp(3rem, 6vw, 4.5rem); border-bottom: var(--rule); }
+  .specs { margin-top: 1.75rem; border-bottom: var(--rule); }
   .spec-list {
     display: grid;
     gap: 0;

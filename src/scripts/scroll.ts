@@ -18,6 +18,16 @@ export function scrollToTarget(target: HTMLElement, focus = true): void {
   }
 }
 
+// Brings an element fully into view below the header: centred when it fits, bottom edge on screen when it does not
+// (a video's native controls run along its bottom edge).
+export function scrollIntoFullView(el: HTMLElement): void {
+  const header = headerOffset();
+  const r = el.getBoundingClientRect();
+  const room = window.innerHeight - header;
+  const top = r.height <= room ? r.top - header - (room - r.height) / 2 : r.bottom - window.innerHeight;
+  window.scrollTo({ top: window.scrollY + top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
+
 // Same-page anchor links (#id and /#id) go through one smooth, header-aware scroll.
 export function initAnchors(): void {
   document.addEventListener('click', (e) => {

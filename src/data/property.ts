@@ -140,13 +140,14 @@ export const property = {
   },
 
   video: {
-    hls: '/media/film/master.m3u8',
-    mp4: '/media/film/film-1080p.mp4',
-    durationSeconds: 56,
-    durationLabel: '0:56',
-    // Silent hero loop cut from the film (tools/build-media.mjs); the master never loads with the page.
-    heroWide: '/media/hero/hero-wide-v1.mp4',
-    heroTall: '/media/hero/hero-tall-v1.mp4',
+    // Final cut “15-1077 AMAU RD, KEAAU - Video” (1080p, 57.6 s), streamed from a versioned folder.
+    hls: '/media/film/v2/master.m3u8',
+    mp4: '/media/film/v2/film-1080p.mp4',
+    durationSeconds: 57,
+    durationLabel: '0:57',
+    // Silent eight-beat hero loop cut from the film and photographs (tools/build-media.mjs); the master never loads.
+    heroWide: '/media/hero/hero-wide-v2.mp4',
+    heroTall: '/media/hero/hero-tall-v2.mp4',
   },
 
   seo: {

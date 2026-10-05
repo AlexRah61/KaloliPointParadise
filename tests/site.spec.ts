@@ -84,31 +84,45 @@ test.describe('page', () => {
     expect(await video.evaluate((v: HTMLVideoElement) => [v.muted, v.loop, v.playsInline, v.preload])).toEqual([true, true, true, 'none']);
     expect(atLoad, 'no video is requested before the page has loaded').toEqual([]);
     await page.waitForTimeout(3500);
-    expect(media.filter((p) => p.startsWith('/media/film/')), 'the 56-second film waits for its play button').toEqual([]);
+    expect(media.filter((p) => p.startsWith('/media/film/')), 'the full film waits for its play button').toEqual([]);
     for (const name of ['wide', 'tall']) {
       const src = (await video.getAttribute(`data-src-${name}`))!;
       const res = await request.get(src);
       expect(res.status()).toBe(200);
       expect(res.headers()['content-type']).toContain('video/mp4');
-      expect((await res.body()).length).toBeLessThan(4 * 1024 * 1024);
+      // The 13 s eight-beat trailer: 1600x900 wide ~4.0 MiB, 864x1080 tall ~2.4 MiB, loaded only after the page.
+      expect((await res.body()).length).toBeLessThan(4.5 * 1024 * 1024);
     }
   });
 
-  test('three levels: tabs switch panels by click and keyboard', async ({ page }) => {
+  test('three levels: tabs switch photo, description, rooms and plan together, by click and keyboard', async ({ page }) => {
     await page.goto('/');
     const tabs = page.getByRole('tablist', { name: 'The three levels' });
     await tabs.scrollIntoViewIfNeeded();
     await expect(page.locator('#level-1')).toBeVisible();
     await expect(page.locator('#level-2')).toBeHidden();
+    const expected = [
+      { tab: /garden level/i, room: 'Covered lanai', dim: '34′0″ × 31′6″', plan: 'Level 1 · with dimensions', photo: /covered lanai/i },
+      { tab: /living level/i, room: 'Family room', dim: '26′8″ × 13′11″', plan: 'Level 2 · with dimensions', photo: /family room/i },
+      { tab: /primary retreat/i, room: 'Primary bedroom', dim: '26′9″ × 19′10″', plan: 'Level 3 · with dimensions', photo: /primary bedroom/i },
+    ];
+    for (const [i, e] of expected.entries()) {
+      await tabs.getByRole('tab', { name: e.tab }).click();
+      const panel = page.locator(`#level-${i + 1}`);
+      await expect(panel).toBeVisible();
+      await expect(tabs.getByRole('tab', { name: e.tab })).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-level-panel]:visible')).toHaveCount(1);
+      await expect(panel.locator('.rooms')).toBeVisible();
+      await expect(panel.locator('.rooms')).toContainText(e.room);
+      await expect(panel.locator('.rooms')).toContainText(e.dim);
+      await expect(panel.locator('a[data-gallery="plans"]')).toHaveAttribute('data-pswp-caption', e.plan);
+      await expect(panel.locator('a[data-gallery="levels"]')).toHaveAttribute('aria-label', e.photo);
+    }
     await tabs.getByRole('tab', { name: /living level/i }).click();
-    await expect(page.locator('#level-2')).toBeVisible();
-    await expect(page.locator('#level-1')).toBeHidden();
     await tabs.getByRole('tab', { name: /living level/i }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(tabs.getByRole('tab', { name: /primary retreat/i })).toBeFocused();
     await expect(page.locator('#level-3')).toBeVisible();
-    await page.locator('#level-3 details summary').click();
-    await expect(page.locator('#level-3 .rooms')).toContainText('Primary bedroom');
   });
 
   test('hero CTA opens the request sheet in place and is tracked', async ({ page }) => {
@@ -375,20 +389,28 @@ test.describe('page', () => {
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('');
   });
 
-  test('the hero pause control never sits on the type', { tag: '@phone' }, async ({ page }) => {
+  test('the hero pause control and beat label never sit on the type', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const overlaps = await page.evaluate(() => {
-      const toggle = document.querySelector<HTMLElement>('[data-hero-toggle]')!;
-      toggle.hidden = false; // shown once the loop plays; position it as visitors would see it
-      const t = toggle.getBoundingClientRect();
-      return [...document.querySelectorAll('[data-hero] .hero-content *')]
-        .flatMap((el) => {
-          const range = document.createRange();
-          range.selectNodeContents(el);
-          return [...range.getClientRects()].map((r) => ({ r, text: (el.textContent ?? '').trim().slice(0, 30) }));
+      // Both are shown once the loop plays; position them as visitors would see them.
+      const controls = ['[data-hero-toggle]', '[data-hero-beat]']
+        .map((s) => {
+          const el = document.querySelector<HTMLElement>(s)!;
+          el.hidden = false;
+          return el.getBoundingClientRect();
         })
-        .filter(({ r }) => r.width > 0 && r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom)
-        .map(({ text }) => text);
+        .filter((r) => r.width > 0); // the beat label is not shown on short landscape screens
+      const header = document.querySelector('[data-header]')!.getBoundingClientRect();
+      const texts = [...document.querySelectorAll('[data-hero] .hero-content *, [data-header] a, [data-header] button')].flatMap((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return [...range.getClientRects()].map((r) => ({ r, text: (el.textContent ?? el.getAttribute('aria-label') ?? '').trim().slice(0, 30) }));
+      });
+      const hits = controls.flatMap((t) =>
+        texts.filter(({ r }) => r.width > 0 && r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom).map(({ text }) => text),
+      );
+      if (controls.some((t) => t.left < 0 || t.right > innerWidth || t.top < header.bottom)) hits.push('control outside the hero area');
+      return hits;
     });
     expect(overlaps).toEqual([]);
   });
@@ -443,7 +465,7 @@ test.describe('page', () => {
 
   test('hero loops answer byte-range requests, as Safari and iOS require for video', async ({ request }, info) => {
     test.skip(info.project.name !== 'desktop-1440', 'server behaviour, checked once');
-    for (const file of ['/media/hero/hero-tall-v1.mp4', '/media/hero/hero-wide-v1.mp4']) {
+    for (const file of ['/media/hero/hero-tall-v2.mp4', '/media/hero/hero-wide-v2.mp4']) {
       const r = await request.get(file, { headers: { Range: 'bytes=0-1' } });
       expect(r.status(), file).toBe(206);
       expect(r.headers()['content-range'], file).toMatch(/^bytes 0-1\/\d{6,}$/);
@@ -511,6 +533,107 @@ test.describe('page', () => {
     await tel.scrollIntoViewIfNeeded();
     await tel.click();
     expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'agent', contact_method: 'phone' }]);
+  });
+
+  test('Watch the film brings the whole player, controls included, into view', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    await page.locator('[data-hero] [data-film-trigger]').click();
+    const player = page.locator('[data-film]');
+    await expect(player).not.toHaveAttribute('data-state', 'idle', { timeout: 20000 });
+    // Let the smooth scroll settle.
+    let last = -1;
+    await expect.poll(async () => {
+      const y = await page.evaluate(() => window.scrollY);
+      const settled = y === last;
+      last = y;
+      return settled;
+    }, { intervals: [300] }).toBe(true);
+    const box = await page.evaluate(() => {
+      const r = document.querySelector('[data-film]')!.getBoundingClientRect();
+      const header = document.querySelector('[data-header]')!.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, headerBottom: header.bottom, vh: window.innerHeight };
+    });
+    expect(box.top, 'player top clears the header').toBeGreaterThanOrEqual(box.headerBottom - 1);
+    expect(box.bottom, 'player bottom edge (play/pause, full screen) is on screen').toBeLessThanOrEqual(box.vh + 1);
+    await expect(page.locator('[data-film-video]')).toHaveJSProperty('controls', true);
+    await page.locator('[data-film-video]').evaluate((v: HTMLVideoElement) => v.pause());
+  });
+
+  test('three lanais: one exterior shows all three, each with its own labelled view', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const section = page.locator('#lanais');
+    await expect(section.locator('#lanais-title')).toContainText('Three lanais');
+    const facade = section.locator('.facade a[data-gallery="lanais"]');
+    await facade.scrollIntoViewIfNeeded();
+    await expect(facade).toHaveAttribute('aria-label', /covered lanai.*wraparound lanai.*top-floor lanai/i);
+    const pins = await section.locator('.pin .pin-dot').evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        const f = el.closest('.facade-frame')!.getBoundingClientRect();
+        return { inside: r.left >= f.left && r.right <= f.right && r.top >= f.top && r.bottom <= f.bottom, visible: r.width > 0 };
+      }),
+    );
+    expect(pins).toEqual(Array(3).fill({ inside: true, visible: true }));
+    const box = await facade.boundingBox();
+    expect(box!.width, 'the exterior is a principal, full-width image').toBeGreaterThanOrEqual(page.viewportSize()!.width * 0.98);
+    const views = section.locator('.lanai-views > li');
+    await expect(views).toHaveCount(3);
+    for (const [i, name] of ['Covered lanai', 'Wraparound lanai', 'Top-floor lanai'].entries()) {
+      await expect(views.nth(i).locator('.view-name')).toHaveText(name);
+      await expect(views.nth(i).locator('.view-level')).toContainText(['Garden level', 'Living level', 'Primary retreat'][i]!);
+      await views.nth(i).scrollIntoViewIfNeeded();
+      await expect.poll(() => views.nth(i).locator('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    }
+  });
+
+  test('light to night ends on the Milky Way, uncropped, large and never under text', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const night = page.locator('#evenings .night-media');
+    await night.scrollIntoViewIfNeeded();
+    await expect.poll(() => night.locator('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    const m = await page.evaluate(() => {
+      const media = document.querySelector('#evenings .night-media')!;
+      const img = media.querySelector('img')!;
+      const r = media.getBoundingClientRect();
+      const ir = img.getBoundingClientRect();
+      const texts = [...document.querySelectorAll('#evenings .night-copy *')].map((el) => el.getBoundingClientRect());
+      const overlap = texts.some((t) => t.width > 0 && t.right > r.left && t.left < r.right && t.bottom > r.top && t.top < r.bottom);
+      return {
+        ratio: ir.width / ir.height,
+        natural: img.naturalWidth / img.naturalHeight,
+        fit: getComputedStyle(img).objectFit,
+        h: r.height,
+        w: r.width,
+        vh: window.innerHeight,
+        vw: window.innerWidth,
+        overlap,
+        bg: getComputedStyle(media.closest('.night')!).backgroundImage,
+      };
+    });
+    expect(Math.abs(m.ratio - m.natural), 'shown at its own proportions').toBeLessThan(0.01);
+    expect(m.fit).toBe('contain');
+    expect(m.overlap, 'no text over the photograph').toBe(false);
+    expect(m.bg).toContain('gradient');
+    if (m.vw >= 900 || (m.vh <= 500 && m.vw >= 560)) expect(m.h, 'as tall as the screen allows').toBeGreaterThanOrEqual(Math.min(m.vh * 0.85, 1195, m.vw * 0.7));
+    else expect(m.w, 'full width on phones').toBeGreaterThanOrEqual(Math.min(m.vw - 60, 540));
+    const order = await page.evaluate(() => [...document.querySelectorAll('main > section, main > div > section, body section[id]')].map((s) => s.id).filter(Boolean));
+    expect(order.indexOf('evenings'), 'after Kaloli Point').toBeGreaterThan(order.indexOf('location'));
+    expect(order.indexOf('evenings'), 'before the showing request').toBeLessThan(order.indexOf('showing'));
+  });
+
+  test('the hero loop names each beat as it plays', async ({ page, browserName }) => {
+    test.skip(browserName === 'chromium', 'Playwright Chromium has no H.264 decoder');
+    await page.goto('/');
+    const beat = page.locator('[data-hero-beat]');
+    await expect(beat).toBeVisible({ timeout: 20000 });
+    const seen = new Set<string>();
+    for (let i = 0; i < 16 && seen.size < 4; i++) {
+      seen.add((await beat.locator('[data-beat-label]').textContent())!.trim());
+      await page.waitForTimeout(900);
+    }
+    expect(seen.size, `labels seen: ${[...seen].join(', ')}`).toBeGreaterThanOrEqual(4);
+    expect(await beat.getAttribute('aria-hidden')).toBe('true');
   });
 
   test('no serious accessibility violations', async ({ page }) => {

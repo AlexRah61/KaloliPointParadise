@@ -1,19 +1,40 @@
 ---
 import { ArrowRight, Pause, Play } from '@lucide/astro';
-import Photo from './Photo.astro';
 import ShowingButton from './ShowingButton.astro';
 import { media } from '../data/media';
 import { property } from '../data/property';
+import { responsive } from '../lib/images';
+import heroBeats from '../data/hero-beats.json';
 
-// Rendered width of a 16:9 frame cover-filling the hero, so retina screens pick the full 2048px file.
-const sizes = '(max-width: 767px) and (min-height: 501px) calc(60vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+// Portrait phones get a square crop centred on the house; everything else the full 16:9 aerial, sized to the
+// rendered width of a 16:9 frame cover-filling the hero so retina screens pick the full 2048px file.
+const PHONE = '(max-width: 767px) and (min-height: 501px)';
+const wide = await responsive(media.heroAerial);
+const tall = await responsive(media.heroPhone);
+const sizes = '(min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
 const c = property.campaign;
+const first = heroBeats.beats[0]!;
+const pad = (n: number) => String(n).padStart(2, '0');
 ---
 
 <section class="hero on-dark" id="top" data-hero aria-labelledby="hero-title">
   <div class="hero-media">
     <div class="hero-pan" data-parallax-hero>
-      <Photo item={media.heroAerial} sizes={sizes} priority class="hero-pic" />
+      <picture class="hero-pic">
+        <source media={PHONE} type="image/avif" srcset={tall.avif} sizes="60vh" />
+        <source media={PHONE} type="image/webp" srcset={tall.webp} sizes="60vh" />
+        <source type="image/avif" srcset={wide.avif} sizes={sizes} />
+        <source type="image/webp" srcset={wide.webp} sizes={sizes} />
+        <img
+          src={wide.fallback}
+          width={wide.width}
+          height={wide.height}
+          alt={media.heroAerial.alt}
+          loading="eager"
+          decoding="sync"
+          fetchpriority="high"
+        />
+      </picture>
       <video
         class="hero-video"
         muted
@@ -27,9 +48,14 @@ const c = property.campaign;
         data-hero-video
         data-src-wide={property.video.heroWide}
         data-src-tall={property.video.heroTall}
+        data-beats={JSON.stringify(heroBeats.beats)}
       ></video>
     </div>
     <div class="hero-shade" aria-hidden="true"></div>
+    <p class="hero-beat" aria-hidden="true" hidden data-hero-beat>
+      <span class="beat-n" data-beat-n>{pad(first.n)}</span><span class="beat-of">/ {pad(heroBeats.count)}</span>
+      <span class="beat-label" data-beat-label>{first.label}</span>
+    </p>
     <button class="hero-toggle" type="button" aria-pressed="false" aria-label="Pause background video" hidden data-hero-toggle>
       <Pause aria-hidden="true" class="i-pause" />
       <Play aria-hidden="true" class="i-play" />
@@ -73,6 +99,7 @@ const c = property.campaign;
   .hero-pan :global(picture), .hero-pan :global(img) { width: 100%; height: 100%; }
   .hero-pan :global(img) {
     object-fit: cover;
+    object-position: 50% 56%;
     animation: hero-settle 2.8s var(--ease) both;
   }
   /* The loop dissolves in over the photograph once its first frame is on screen; until then (or if it never
@@ -88,12 +115,14 @@ const c = property.campaign;
     pointer-events: none;
   }
   .hero[data-video='playing'] .hero-video { opacity: 1; }
+  /* A soft scrim behind the type block keeps it legible over the brightest beats (sky, white rooms, sunset). */
   .hero-shade {
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(10, 12, 10, 0.45) 0%, rgba(10, 12, 10, 0) 22%, rgba(10, 12, 10, 0) 40%, rgba(10, 12, 10, 0.86) 100%),
-      linear-gradient(90deg, rgba(10, 12, 10, 0.66) 0%, rgba(10, 12, 10, 0.22) 36%, rgba(10, 12, 10, 0) 56%);
+      radial-gradient(ellipse 58% 62% at 18% 72%, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0.25) 55%, rgba(10, 12, 10, 0) 100%),
+      linear-gradient(180deg, rgba(10, 12, 10, 0.45) 0%, rgba(10, 12, 10, 0) 22%, rgba(10, 12, 10, 0) 36%, rgba(10, 12, 10, 0.86) 100%),
+      linear-gradient(90deg, rgba(10, 12, 10, 0.7) 0%, rgba(10, 12, 10, 0.28) 38%, rgba(10, 12, 10, 0) 58%);
   }
 
   .hero-toggle {
@@ -116,6 +145,37 @@ const c = property.campaign;
   .hero-toggle :global(svg) { width: 0.95rem; height: 0.95rem; }
   .hero-toggle :global(.i-play), .hero-toggle[aria-pressed='true'] :global(.i-pause) { display: none; }
   .hero-toggle[aria-pressed='true'] :global(.i-play) { display: block; }
+
+  /* What the loop is showing, beside its pause control; solid enough to read over a white sky. */
+  .hero-beat {
+    position: absolute;
+    z-index: 3;
+    top: calc(var(--header-h) + 1rem);
+    right: calc(var(--gutter) + 40px + 0.5rem);
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 0.9rem;
+    background: color-mix(in srgb, var(--ink) 80%, transparent);
+    color: var(--ivory);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .hero-beat[hidden] { display: none; }
+  /* Small phones (e.g. 320 x 568) leave only ~200px for the moving image: keep it clear of labels. */
+  @media (max-width: 767px) and (max-height: 600px) {
+    .hero-beat { display: none; }
+  }
+  .beat-n { font-family: var(--font-serif); font-size: 0.95rem; letter-spacing: 0.02em; color: var(--bronze-light); }
+  .beat-of { color: var(--stone); margin-right: 0.25rem; }
+  @media (max-width: 399px) {
+    .beat-of { display: none; }
+  }
 
   .hero-content {
     position: relative;
@@ -250,6 +310,8 @@ const c = property.campaign;
       background: linear-gradient(180deg, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0) 26%, rgba(10, 12, 10, 0) 58%, var(--ink) 100%);
     }
     .hero-toggle { top: calc(var(--header-h) + 0.75rem); }
+    .hero-beat { top: calc(var(--header-h) + 0.75rem); }
+    .hero-pan :global(img) { object-position: 50% 50%; }
     .hero-content { padding-top: 0; margin-top: -4.5rem; padding-bottom: 2.25rem; }
     .hero-title { margin-top: 0.9rem; }
     .line > span { font-size: clamp(2.9rem, 1.6rem + 6.6vw, 4.2rem); }
@@ -264,6 +326,7 @@ const c = property.campaign;
 
   /* Short landscape screens: the same composition, with tighter type so the price and actions stay near the fold. */
   @media (max-height: 500px) {
+    .hero-beat { display: none; }
     .hero-content { padding-top: calc(var(--header-h) + 1.25rem); padding-bottom: 1.75rem; }
     .hero-title { margin-top: 0.75rem; }
     .line > span { font-size: clamp(2.6rem, 9vh, 3.6rem); }

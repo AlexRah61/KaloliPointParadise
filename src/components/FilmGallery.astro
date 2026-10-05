@@ -7,16 +7,16 @@ import { lightbox } from '../lib/images';
 import { property } from '../data/property';
 import { SIZES } from '../lib/sizes';
 
-// The landing-page edit: arrival → architecture → lanai → kitchen → living → primary suite → garden → evening.
+// The landing-page edit: arrival from above → lanai → kitchen → bedrooms → garden → the approach and the stair.
 // None of these photographs appear elsewhere on the page; every one is also in the full collection.
 type Tile = { item: MediaItem; span: number; phoneWide?: boolean };
 const curated: Tile[][] = [
-  [{ item: media.frontElevation, span: 7, phoneWide: true }, { item: media.entry, span: 5 }],
-  [{ item: media.lanaiTopView, span: 5 }, { item: media.lanaiCovered, span: 7, phoneWide: true }],
-  [{ item: media.kitchenIsland, span: 8 }, { item: media.gardenLiving, span: 4 }],
+  [{ item: media.aerialSite, span: 7, phoneWide: true }, { item: media.entry, span: 5 }],
+  [{ item: media.lanaiRockers, span: 5 }, { item: media.groundsWall, span: 7, phoneWide: true }],
+  [{ item: media.kitchenIsland, span: 8 }, { item: media.flexRoom, span: 4 }],
   [{ item: media.primaryShower, span: 4 }, { item: media.primaryDesk, span: 8 }],
-  [{ item: media.groundsGarden, span: 7, phoneWide: true }, { item: media.rainbow, span: 5 }],
-  [{ item: media.sunsetYard, span: 12, phoneWide: true }],
+  [{ item: media.groundsGarden, span: 7, phoneWide: true }, { item: media.citrus, span: 5 }],
+  [{ item: media.approach, span: 7, phoneWide: true }, { item: media.stairLight, span: 5 }],
 ];
 const rows = await Promise.all(
   curated.map((row) => Promise.all(row.map(async (t) => ({ ...t, lb: await lightbox(t.item) })))),
@@ -31,7 +31,7 @@ const chapters = await Promise.all(
     <div class="container">
       <div class="film-head">
         <p class="eyebrow" data-reveal>The property film · {property.video.durationLabel}</p>
-        <h2 class="display display--lg" id="film-title" data-reveal>56 Seconds at Kaloli Point</h2>
+        <h2 class="display display--lg" id="film-title" data-reveal>{property.video.durationSeconds} Seconds at Kaloli Point</h2>
         <p class="lede film-sub" data-reveal>Move through the residence, across the lanais, and into the tropical half acre.</p>
       </div>
 
@@ -53,7 +53,7 @@ const chapters = await Promise.all(
         <p class="film-status" role="status" aria-live="polite" data-film-status></p>
       </div>
       <div class="film-foot">
-        <p class="film-meta">Sound on · Up to 4K</p>
+        <p class="film-meta">Sound on · Full HD</p>
         <ShowingButton origin="film" class="text-link soft" label="Arrange a private visit" />
       </div>
     </div>
@@ -146,8 +146,15 @@ const chapters = await Promise.all(
   .film-head { display: grid; gap: 1.25rem; margin-bottom: clamp(2rem, 4vw, 3.25rem); }
   .film-head .display { max-width: 15ch; }
   .film-sub { max-width: 34ch; color: var(--stone); }
-  .player { background: #000; aspect-ratio: 16 / 9; }
-  @media (max-width: 767px) {
+  .player {
+    background: #000;
+    aspect-ratio: 16 / 9;
+    /* Never taller than the screen below the header, so the controls along the bottom stay in view. */
+    max-width: calc((100vh - var(--header-h-solid) - 2rem) * 16 / 9);
+    max-width: calc((100svh - var(--header-h-solid) - 2rem) * 16 / 9);
+    margin-inline: auto;
+  }
+  @media (max-width: 767px) and (min-height: 501px) {
     .player { margin-inline: calc(-1 * var(--gutter)); }
   }
   .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }

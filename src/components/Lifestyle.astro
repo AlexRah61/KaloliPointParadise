@@ -46,31 +46,14 @@ const a = property.address;
         <li><span class="k">The shoreline</span><span class="v">Black lava headlands, open Pacific surf, and honu resting on the rocks.</span></li>
         <li><span class="k">The setting</span><span class="v">A sunbelt microclimate with paved roads and scenic coastal surroundings.</span></li>
         <li><span class="k">From the house</span><span class="v">Sunrises, colorful sunsets, a peekaboo ocean view and the breeze through every lanai.</span></li>
-        <li><span class="k">After dark</span><span class="v">Star-filled skies above the house.</span></li>
       </ul>
     </div>
     <Zoomable item={media.lookout} gallery="coast" class="coast-a" frameClass="ar-4x5" sizes="(min-width: 1000px) 30vw, 92vw" data-reveal-image />
     <Zoomable item={media.honuLava} gallery="coast" class="coast-b" frameClass="ar-4x3" sizes="(min-width: 1000px) 40vw, 92vw" />
   </div>
-
-  <div class="evening on-dark">
-    <div class="evening-media">
-      <Photo item={media.sunsetHouse} sizes="(max-width: 767px) 167vw, (max-aspect-ratio: 4/3) calc(90vh * 1.3333), 100vw" />
-    </div>
-    <div class="evening-shade" aria-hidden="true"></div>
-    <div class="container evening-copy on-photo">
-      <p class="eyebrow" data-reveal>Island evenings</p>
-      <p class="display display--lg" data-reveal>As the day ends, <em>the sky takes over.</em></p>
-      <div class="night">
-        <Photo item={media.nightSky} sizes="(min-width: 900px) 240px, 40vw" />
-        <p class="night-cap">The Milky Way above the house. Owner photograph.</p>
-      </div>
-    </div>
-  </div>
 </section>
 
 <style>
-  .lifestyle { padding-bottom: 0; }
   .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
   .head-title { grid-column: 1 / -1; }
   .head-title .display { margin-top: 1.25rem; }
@@ -127,32 +110,5 @@ const a = property.address;
     .place-panel { grid-column: 1 / span 5; grid-row: 1 / span 2; }
     .coast-a { grid-column: 7 / span 3; grid-row: 1; }
     .coast-b { grid-column: 10 / -1; grid-row: 1; align-self: end; }
-  }
-
-  .evening {
-    position: relative;
-    margin-top: clamp(4.5rem, 9vw, 8rem);
-    min-height: 100vh;
-    min-height: 100svh;
-    display: grid;
-    align-items: end;
-    overflow: hidden;
-    background: var(--ink);
-  }
-  .evening-media { position: absolute; inset: 0; }
-  .evening-media :global(picture), .evening-media :global(img) { width: 100%; height: 100%; }
-  .evening-media :global(img) { object-fit: cover; }
-  .evening-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 10, 0) 35%, rgba(10, 12, 10, 0.72) 85%, var(--ink) 100%); }
-  .evening-copy { position: relative; padding-block: 8rem clamp(3rem, 8vh, 5.5rem); display: grid; gap: 1.25rem; }
-  .evening-copy .display { max-width: 14ch; color: var(--white); }
-  .night { display: flex; align-items: end; gap: 1rem; margin-top: 1rem; }
-  .night :global(picture) { width: clamp(6.5rem, 14vw, 9.5rem); aspect-ratio: 896 / 1195; flex: none; }
-  .night :global(img) { width: 100%; height: 100%; object-fit: cover; }
-  .night-cap { max-width: 22ch; font-size: var(--step--1); color: var(--stone); }
-  @media (max-width: 767px) {
-    .evening { display: block; min-height: 0; }
-    .evening-media { position: relative; aspect-ratio: 4 / 5; }
-    .evening-shade { height: calc(100vw * 1.25); bottom: auto; background: linear-gradient(180deg, rgba(10, 12, 10, 0) 50%, var(--ink) 100%); }
-    .evening-copy { padding-top: 0; margin-top: -5rem; padding-bottom: 3rem; }
   }
 </style>

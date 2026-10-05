@@ -1,7 +1,7 @@
 import { track } from './analytics';
-import { scrollToTarget } from './scroll';
+import { scrollIntoFullView } from './scroll';
 
-// The full film streams as adaptive HLS (480p–4K). Safari/iOS play it natively; others load hls.js on demand.
+// The full film streams as adaptive HLS (480p–1080p). Safari/iOS play it natively; others load hls.js on demand.
 export function initFilm(): void {
   const root = document.querySelector<HTMLElement>('[data-film]');
   if (!root) return;
@@ -74,9 +74,9 @@ export function initFilm(): void {
   document.querySelectorAll<HTMLAnchorElement>('[data-film-trigger]').forEach((a) =>
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      const section = document.getElementById('film');
-      if (section) scrollToTarget(section, false);
-      void play();
+      // The whole player, not just the section heading, so play/pause and full screen are on screen.
+      scrollIntoFullView(root);
+      void play().then(() => video.focus({ preventScroll: true }));
     }),
   );
 

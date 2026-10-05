@@ -12,8 +12,9 @@ worker-configuration.d.ts
 .env.local
 .env.*.local
 
-# 211 MB master film stays on the build machine; web derivatives live in public/media
+# Master films (211 MB edit, 295 MB final cut) stay on the build machine; web derivatives live in public/media
 assets/*.mov
+assets/*.mp4
 # Owner phone originals carry GPS metadata; the site uses the stripped copies in src/assets/derived/owner
 assets/Photos/Fruit and ocean photos/
 

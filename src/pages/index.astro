@@ -6,6 +6,7 @@ import Levels from '../components/Levels.astro';
 import Living from '../components/Living.astro';
 import FilmGallery from '../components/FilmGallery.astro';
 import Lifestyle from '../components/Lifestyle.astro';
+import Evenings from '../components/Evenings.astro';
 import ShowingForm from '../components/ShowingForm.astro';
 import { getImage } from 'astro:assets';
 import { property, SITE_URL } from '../data/property';
@@ -13,7 +14,9 @@ import { media } from '../data/media';
 import { responsive } from '../lib/images';
 
 const heroSet = await responsive(media.heroAerial);
-const heroSizes = '(max-width: 767px) calc(60vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+const heroPhoneSet = await responsive(media.heroPhone);
+// Must match the <picture> sources in Hero.astro.
+const heroSizes = '(min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
 
 const schemaImages = await Promise.all(
   [media.heroAerial, media.architectureAerial, media.kitchenWide, media.lanaiFurnished, media.primaryBedroom].map(
@@ -86,7 +89,8 @@ const jsonLd = [
 
 <Base jsonLd={jsonLd}>
   <Fragment slot="head">
-    <link rel="preload" as="image" type="image/avif" imagesrcset={heroSet.avif} imagesizes={heroSizes} fetchpriority="high" />
+    <link rel="preload" as="image" type="image/avif" imagesrcset={heroPhoneSet.avif} imagesizes="60vh" media="(max-width: 767px) and (min-height: 501px)" fetchpriority="high" />
+    <link rel="preload" as="image" type="image/avif" imagesrcset={heroSet.avif} imagesizes={heroSizes} media="(min-width: 768px), (max-height: 500px)" fetchpriority="high" />
   </Fragment>
 
   <Hero />
@@ -95,5 +99,6 @@ const jsonLd = [
   <Living />
   <FilmGallery />
   <Lifestyle />
+  <Evenings />
   <ShowingForm />
 </Base>

@@ -9,8 +9,11 @@ import ffmpegPath from 'ffmpeg-static';
 import sharp from 'sharp';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// The 4K edit feeds the hero loop and gallery stills; the final 1080p cut is the film visitors play.
 const SOURCE = join(ROOT, 'assets', '15-1077AmauRd_VideoEdit.mov');
-const FILM_DIR = join(ROOT, 'public', 'media', 'film');
+const FILM = join(ROOT, 'assets', '15-1077 AMAU RD, KEAAU - Video.mp4');
+// Versioned so cached playlists and segments of an earlier cut are never mixed with this one.
+const FILM_DIR = join(ROOT, 'public', 'media', 'film', 'v2');
 const STILLS_DIR = join(ROOT, 'src', 'assets', 'derived');
 const force = process.argv.includes('--force');
 
@@ -21,10 +24,18 @@ function ffmpeg(args, label, cwd = ROOT) {
   console.log(`  ✓ ${label} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 }
 
-// Real frames from the paid film. Sky-replaced moments (~29.6s, ~45.6s) are deliberately excluded.
+function probe(file) {
+  const { stderr } = spawnSync(ffmpegPath, ['-hide_banner', '-i', file], { encoding: 'utf8' });
+  const d = /Duration: (\d+):(\d+):([\d.]+)/.exec(stderr);
+  const v = /Video: .*?, (\d{3,5})x(\d{3,5})/.exec(stderr);
+  if (!d || !v) throw new Error(`could not read ${file}`);
+  return { seconds: Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]), width: Number(v[1]), height: Number(v[2]) };
+}
+
+// Real frames from the paid films. Sky-replaced moments (~29.6s, ~45.6s of the edit) are deliberately excluded.
 const STILLS = [
   { file: 'film-ocean-aerial.jpg', t: 0.25, note: 'Opening aerial toward the Pacific horizon' },
-  { file: 'film-poster-residence.jpg', t: 2.12, note: 'Aerial reveal of the residence among the pines (film poster)' },
+  { file: 'film-poster-v2.jpg', t: 1.6, src: FILM, note: 'The residence from the air, opening of the final cut (film poster)' },
   { file: 'film-stair-light.jpg', t: 16.2, note: 'Stair with step light linking the levels' },
   { file: 'film-citrus.jpg', t: 48.3, note: 'Citrus tree on the grounds (gecko on fruit)' },
 ];
@@ -34,7 +45,7 @@ console.log('Stills from film');
 for (const s of STILLS) {
   const out = join(STILLS_DIR, s.file);
   if (!force && existsSync(out)) continue;
-  ffmpeg(['-ss', String(s.t), '-i', SOURCE, '-frames:v', '1', '-q:v', '2', out], `${s.file} @ ${s.t}s`);
+  ffmpeg(['-ss', String(s.t), '-i', s.src ?? SOURCE, '-frames:v', '1', '-q:v', '2', out], `${s.file} @ ${s.t}s`);
 }
 
 // Floor plans: CubiCasa canvases are ~45% whitespace. Crop to the drawing (dark pixels only, so the
@@ -100,8 +111,8 @@ if (existsSync(OWNER_DIR)) {
   }
 }
 
-// HLS ladder. 4 s GOPs aligned across renditions so the player can switch cleanly.
-// 2160p keeps the master's full 4K detail for large/retina screens in fullscreen.
+// HLS ladder. 4 s GOPs aligned across renditions so the player can switch cleanly. Rungs above the film's own
+// resolution are skipped (never upscaled).
 const LADDER = [
   { name: '2160p', w: 3840, h: 2160, crf: 20, maxrate: 18000, level: '5.1', codec: 'avc1.640033' },
   { name: '1440p', w: 2560, h: 1440, crf: 20, maxrate: 9000, level: '5.0', codec: 'avc1.640032' },
@@ -111,21 +122,22 @@ const LADDER = [
 ];
 const GOP = ['-g', '120', '-keyint_min', '120', '-sc_threshold', '0', '-x264-params', 'scenecut=0:open_gop=0'];
 const master = join(FILM_DIR, 'master.m3u8');
+const film = probe(FILM);
 
-console.log('HLS film ladder');
+console.log(`HLS film ladder (${film.width}x${film.height}, ${film.seconds.toFixed(2)} s)`);
 if (force) rmSync(FILM_DIR, { recursive: true, force: true });
 const variants = [];
-for (const r of LADDER) {
+for (const r of LADDER.filter((l) => l.h <= film.height)) {
   const dir = join(FILM_DIR, r.name);
   if (force || !existsSync(join(dir, 'init.mp4')) || !existsSync(join(dir, 'index.m3u8'))) {
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
     ffmpeg([
-      '-i', SOURCE,
+      '-i', FILM,
       '-vf', `scale=${r.w}:${r.h}:flags=lanczos,format=yuv420p`,
       '-c:v', 'libx264', '-preset', 'slow', '-profile:v', 'high', '-level:v', r.level,
       '-crf', String(r.crf), '-maxrate', `${r.maxrate}k`, '-bufsize', `${r.maxrate * 2}k`, ...GOP,
-      '-c:a', 'aac', '-b:a', '128k', '-ac', '2', '-ar', '44100',
+      '-c:a', 'aac', '-b:a', '128k', '-ac', '2', '-ar', '48000',
       '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
       // ffmpeg writes the fMP4 init file relative to the CWD, so encode from inside the rendition folder.
       '-hls_segment_type', 'fmp4', '-hls_fmp4_init_filename', 'init.mp4',
@@ -137,7 +149,7 @@ for (const r of LADDER) {
   const segs = readdirSync(dir).filter((f) => f.endsWith('.m4s'));
   const peak = Math.max(...segs.map((f) => statSync(join(dir, f)).size));
   const total = segs.reduce((n, f) => n + statSync(join(dir, f)).size, 0);
-  variants.push({ ...r, peakBps: Math.ceil((peak * 8) / 4), avgBps: Math.ceil((total * 8) / 56.2) });
+  variants.push({ ...r, peakBps: Math.ceil((peak * 8) / 4), avgBps: Math.ceil((total * 8) / film.seconds) });
 }
 const lines = ['#EXTM3U', '#EXT-X-VERSION:7', '#EXT-X-INDEPENDENT-SEGMENTS'];
 for (const v of variants) {
@@ -153,29 +165,50 @@ console.log('  ✓ master.m3u8', variants.map((v) => `${v.name}:${(v.avgBps / 1e
 const fallback = join(FILM_DIR, 'film-1080p.mp4');
 if (force || !existsSync(fallback)) {
   ffmpeg([
-    '-i', SOURCE, '-vf', 'scale=1920:1080:flags=lanczos,format=yuv420p',
+    '-i', FILM, '-vf', 'scale=1920:1080:flags=lanczos,format=yuv420p',
     '-c:v', 'libx264', '-preset', 'slow', '-profile:v', 'high', '-crf', '22', '-maxrate', '3000k', '-bufsize', '6000k',
-    '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', fallback,
+    '-c:a', 'aac', '-b:a', '128k', '-ar', '48000', '-movflags', '+faststart', fallback,
   ], 'MP4 fallback 1080p');
 }
-rmSync(join(FILM_DIR, 'film-720p.mp4'), { force: true });
 
-// Hero loop: four authentic moments from the film, slowed with motion interpolation, cross-dissolved,
-// and closed on itself so the loop has no seam. Never the master itself; silent; sky-replaced frames
-// (~29.0-30.0 s, ~44.8-46.6 s) stay out. `x` is the horizontal focal point for the portrait phone crop.
+// Hero loop: an eight-beat trailer of authentic film moments, slowed with motion interpolation, cross-dissolved,
+// ending on the owners' sunset photograph and closed on itself so the loop has no seam. Never the master itself;
+// silent; sky-replaced frames (~29.0-30.0 s, ~45.3-46.6 s) stay out. `x` is the horizontal focal point for the
+// portrait phone crop. Beat labels and their start times are written to src/data/hero-beats.json.
 const HERO_DIR = join(ROOT, 'public', 'media', 'hero');
-const HERO_VERSION = 'v1';
-const HERO_MOMENTS = [
-  { from: 51.62, to: 52.62, slow: 2.6, x: 0.44, note: 'Elevated view: the residence beside the paved road' },
-  { from: 28.2, to: 28.84, slow: 2.6, x: 0.34, note: 'Along the upper wraparound lanai' },
-  { from: 42.08, to: 42.84, slow: 2.4, x: 0.42, note: 'Garden-level covered lanai and red ti' },
-  { from: 38.8, to: 39.8, slow: 2.6, x: 0.5, note: 'Over the lawn and plantings' },
+const HERO_VERSION = 'v2';
+const HERO_BEATS = [
+  { label: 'Life at Kaloli Point', from: 54.15, to: 55.75, slow: 1.5, x: 0.5, note: 'Over Kaloli Point to the Pacific' },
+  { label: 'Three levels', from: 1.9, to: 2.5, slow: 2.8, x: 0.42, note: 'The three-level residence from the air' },
+  { label: 'Three lanais', from: 44.5, to: 45.25, slow: 2.6, x: 0.5, note: 'All three lanai levels from the lawn' },
+  { label: 'Three lanais', from: 26.6, to: 27.4, slow: 2.4, x: 0.42, note: 'Along the upper wraparound lanai' },
+  { label: 'Garden level', from: 9.3, to: 10.05, slow: 2.6, x: 0.36, note: 'Garden living room open to the covered lanai' },
+  { label: 'Living level', from: 20.05, to: 21.3, slow: 1.6, x: 0.38, note: 'Kitchen and waterfall-edge island' },
+  { label: 'Primary retreat', from: 30.35, to: 31.1, slow: 2.6, x: 0.66, note: 'Primary bedroom wrapped in windows' },
+  { label: 'The half acre', from: 38.9, to: 39.65, slow: 2.6, x: 0.32, note: 'Over the walled lawn and planted borders' },
+  { label: 'Island evenings', still: 'assets-listing/listing-sunset-house.jpg', seconds: 2.8, x: 0.56, y: 0.42, zoom: 0.06, note: 'Sunset over the house (owner photograph)' },
 ];
 const HERO_FADE = 0.6;
 const HERO_VARIANTS = [
-  { name: 'wide', w: 1920, h: 1080, crf: 24, maxrate: 4500 },
-  { name: 'tall', w: 864, h: 1080, crf: 25, maxrate: 2200 },
+  // 1600x900: a 13 s loop at 1080p would cost ~5 MB; this keeps it under 4 MB with fewer compression artefacts.
+  { name: 'wide', w: 1600, h: 900, crf: 26, maxrate: 3000 },
+  { name: 'tall', w: 864, h: 1080, crf: 26, maxrate: 1800 },
 ];
+
+// A still becomes a slow push-in: crop to the output shape around the focal point, upscale 3x so zoompan's
+// whole-pixel steps are invisible, then zoom by `zoom` over the beat.
+async function stillFilter(b, v) {
+  const { width: iw, height: ih } = await sharp(join(ROOT, b.still)).metadata();
+  const aspect = v.w / v.h;
+  const cw = Math.min(iw, Math.round(ih * aspect));
+  const ch = Math.round(cw / aspect);
+  const cx = Math.round(Math.min(Math.max(b.x * iw - cw / 2, 0), iw - cw));
+  const cy = Math.round(Math.min(Math.max(b.y * ih - ch / 2, 0), ih - ch));
+  const frames = Math.round(b.seconds * 30);
+  return `crop=${cw}:${ch}:${cx}:${cy},scale=${v.w * 3}:${v.h * 3}:flags=lanczos,` +
+    `zoompan=z='1+${b.zoom}*on/${frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${v.w}x${v.h}:fps=30,format=yuv420p`;
+}
+
 mkdirSync(HERO_DIR, { recursive: true });
 console.log('Hero loop');
 for (const v of HERO_VARIANTS) {
@@ -185,24 +218,37 @@ for (const v of HERO_VARIANTS) {
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
   const lengths = [];
-  HERO_MOMENTS.forEach((m, i) => {
+  for (const [i, b] of HERO_BEATS.entries()) {
+    const seg = join(tmp, `m${i}.mp4`);
+    if (b.still) {
+      const frames = Math.round(b.seconds * 30);
+      ffmpeg([
+        '-loop', '1', '-framerate', '30', '-t', String(b.seconds), '-i', join(ROOT, b.still), '-an',
+        '-vf', await stillFilter(b, v), '-frames:v', String(frames), '-c:v', 'libx264', '-preset', 'fast', '-crf', '12', seg,
+      ], `hero ${v.name} beat ${i + 1}: ${b.note}`);
+      lengths.push(frames / 30);
+      continue;
+    }
     // Portrait: a 4:5 window of the 3840x2160 master centred on the subject.
-    const crop = v.name === 'tall' ? `crop=1728:2160:${Math.round(Math.min(Math.max(m.x * 3840 - 864, 0), 3840 - 1728))}:0,` : '';
+    const crop = v.name === 'tall' ? `crop=1728:2160:${Math.round(Math.min(Math.max(b.x * 3840 - 864, 0), 3840 - 1728))}:0,` : '';
     ffmpeg([
-      '-ss', String(m.from), '-t', String(m.to - m.from), '-i', SOURCE, '-an',
-      '-vf', `${crop}scale=${v.w}:${v.h}:flags=lanczos,minterpolate=fps=${Math.round(30 * m.slow)}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=${m.slow}*PTS,fps=30,format=yuv420p`,
-      '-c:v', 'libx264', '-preset', 'fast', '-crf', '12', join(tmp, `m${i}.mp4`),
-    ], `hero ${v.name} moment ${i + 1}: ${m.note}`);
-    lengths.push(Math.round((m.to - m.from) * m.slow * 30) / 30);
-  });
-  // m0 m1 m2 m3 m0 cross-dissolved, then trimmed to start and end inside m0 at the same frame: a seamless loop.
-  const inputs = [...HERO_MOMENTS.keys(), 0].flatMap((i) => ['-i', join(tmp, `m${i}.mp4`)]);
+      '-ss', String(b.from), '-t', String(b.to - b.from), '-i', SOURCE, '-an',
+      '-vf', `${crop}scale=${v.w}:${v.h}:flags=lanczos,minterpolate=fps=${Math.round(30 * b.slow)}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=${b.slow}*PTS,fps=30,format=yuv420p`,
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '12', seg,
+    ], `hero ${v.name} beat ${i + 1}: ${b.note}`);
+    lengths.push(Math.round((b.to - b.from) * b.slow * 30) / 30);
+  }
+  // m0 … m8 m0 cross-dissolved, then trimmed to start and end inside m0 at the same frame: a seamless loop.
+  const inputs = [...HERO_BEATS.keys(), 0].flatMap((i) => ['-i', join(tmp, `m${i}.mp4`)]);
   const seq = [...lengths, lengths[0]];
   let chain = '';
   let prev = '[0:v]';
   let offset = 0;
+  const starts = [0];
   for (let i = 1; i < seq.length; i++) {
     offset += seq[i - 1] - HERO_FADE;
+    // Labels change halfway through each dissolve, on the trimmed timeline.
+    starts.push(offset - HERO_FADE / 2);
     const label = `[x${i}]`;
     chain += `${prev}[${i}:v]xfade=transition=fade:duration=${HERO_FADE}:offset=${offset.toFixed(3)}${label};`;
     prev = label;
@@ -215,6 +261,32 @@ for (const v of HERO_VARIANTS) {
     '-maxrate', `${v.maxrate}k`, '-bufsize', `${v.maxrate * 2}k`, '-g', '60', '-movflags', '+faststart', out,
   ], `hero-${v.name}-${HERO_VERSION}.mp4 (${(end - HERO_FADE).toFixed(1)} s)`);
   rmSync(tmp, { recursive: true, force: true });
+  if (v.name === 'wide') {
+    const names = [...new Set(HERO_BEATS.map((b) => b.label))];
+    const beats = starts
+      .map((t, i) => ({ t: Math.round(Math.max(t, 0) * 100) / 100, label: HERO_BEATS[i % HERO_BEATS.length].label }))
+      .filter((b, i, all) => i === 0 || b.label !== all[i - 1].label)
+      .map((b) => ({ ...b, n: names.indexOf(b.label) + 1 }));
+    writeFileSync(
+      join(ROOT, 'src', 'data', 'hero-beats.json'),
+      JSON.stringify({ version: HERO_VERSION, duration: Math.round((end - HERO_FADE) * 100) / 100, count: names.length, beats }, null, 2) + '\n',
+    );
+    console.log(`  ✓ hero-beats.json (${beats.length} label changes)`);
+  }
+}
+
+// Portrait phones: a square crop of the hero photograph centred on the house, so the first paint downloads
+// a phone-sized file instead of the full 16:9 frame.
+const HERO_PHONE = join(STILLS_DIR, 'hero-phone.jpg');
+if (force || !existsSync(HERO_PHONE)) {
+  const src = join(ROOT, 'assets', 'Photos', 'DJI_20261001133743_0632_D.jpg');
+  const { width, height } = await sharp(src).metadata();
+  const side = Math.min(width, height);
+  await sharp(src)
+    .extract({ left: Math.round((width - side) / 2), top: Math.round((height - side) / 2), width: side, height: side })
+    .jpeg({ quality: 92, mozjpeg: true })
+    .toFile(HERO_PHONE);
+  console.log(`  ✓ hero-phone.jpg ${side}x${side}`);
 }
 
 // Hard guard for the Workers static-asset limit.

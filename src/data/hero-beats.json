@@ -1,0 +1,52 @@
+{
+  "version": "v2",
+  "duration": 13.27,
+  "count": 8,
+  "beats": [
+    {
+      "t": 0,
+      "label": "Life at Kaloli Point",
+      "n": 1
+    },
+    {
+      "t": 1.5,
+      "label": "Three levels",
+      "n": 2
+    },
+    {
+      "t": 2.57,
+      "label": "Three lanais",
+      "n": 3
+    },
+    {
+      "t": 5.27,
+      "label": "Garden level",
+      "n": 4
+    },
+    {
+      "t": 6.63,
+      "label": "Living level",
+      "n": 5
+    },
+    {
+      "t": 8.03,
+      "label": "Primary retreat",
+      "n": 6
+    },
+    {
+      "t": 9.4,
+      "label": "The half acre",
+      "n": 7
+    },
+    {
+      "t": 10.77,
+      "label": "Island evenings",
+      "n": 8
+    },
+    {
+      "t": 12.97,
+      "label": "Life at Kaloli Point",
+      "n": 1
+    }
+  ]
+}

@@ -22,9 +22,40 @@ export function initHeroLoop(): void {
   const play = () => {
     if (started && onScreen && !userPaused && !document.hidden) void video.play().catch(() => undefined);
   };
+
+  // The label beside the pause control names the beat on screen (times come from tools/build-media.mjs).
+  const beatEl = hero.querySelector<HTMLElement>('[data-hero-beat]');
+  const beats = JSON.parse(video.dataset.beats ?? '[]') as { t: number; label: string; n: number }[];
+  let beatShown = 0;
+  const syncBeat = () => {
+    if (!beatEl || beats.length < 2) return;
+    let i = 0;
+    while (i + 1 < beats.length && video.currentTime >= beats[i + 1]!.t) i++;
+    if (i === beatShown) return;
+    beatShown = i;
+    const label = beatEl.querySelector('[data-beat-label]')!;
+    // The closing dissolve already shows the opening beat, so the wrap to 0 s changes nothing.
+    if (label.textContent === beats[i]!.label) return;
+    const num = beatEl.querySelector<HTMLElement>('[data-beat-n]')!;
+    num.textContent = String(beats[i]!.n).padStart(2, '0');
+    label.textContent = beats[i]!.label;
+    // Only the words fade; the chip behind them stays solid so they never lose contrast.
+    for (const el of [num, label]) el.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: 'ease-out' });
+  };
+  if ('requestVideoFrameCallback' in video) {
+    const onFrame = () => {
+      syncBeat();
+      video.requestVideoFrameCallback(onFrame);
+    };
+    video.requestVideoFrameCallback(onFrame);
+  } else {
+    (video as HTMLVideoElement).addEventListener('timeupdate', syncBeat);
+  }
+
   const show = () => {
     hero.dataset.video = 'playing';
     if (toggle) toggle.hidden = false;
+    if (beatEl) beatEl.hidden = false;
   };
 
   video.addEventListener(
@@ -39,6 +70,7 @@ export function initHeroLoop(): void {
   video.addEventListener('error', () => {
     delete hero.dataset.video;
     if (toggle) toggle.hidden = true;
+    if (beatEl) beatEl.hidden = true;
   });
 
   const start = () => {
