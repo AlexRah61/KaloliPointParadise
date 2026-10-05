@@ -190,7 +190,7 @@ export const media = {
   // Evenings (owner photographs from the public listing)
   sunsetHouse: owner('listing-sunset-house.jpg', 'The house beneath a pink and violet sky at dusk, with hibiscus in the foreground', { caption: 'Dusk over the house', focus: '56% 45%' }),
   sunsetYard: owner('listing-sunset-yard.jpg', 'Sunset clouds and a crescent moon over the lawn, palms and red ti', { caption: 'Sunset over the garden', focus: '50% 40%' }),
-  nightSky: owner('listing-night-sky.jpg', 'The Milky Way above the illuminated house at night', { caption: 'The Milky Way above the house', focus: '50% 35%' }),
+  nightSky: owner('listing-night-sky.jpg', 'A starry night sky above the illuminated house', { caption: 'Stars above the house', focus: '50% 35%' }),
 
   agentPortrait: still('agent-misti.jpg', 'Misti R. Tyrin, listing agent', { focus: '62% 30%', file: 'assets/misti pic.avif', source: 'agent' }),
 } satisfies Record<string, MediaItem>;

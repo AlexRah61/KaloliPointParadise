@@ -27,7 +27,8 @@ export const property = {
     island: 'Island of Hawaiʻi',
     full: '15-1077 Amau Rd, Keaau, HI 96749',
   },
-  geo: { lat: 19.615055, lng: -154.95381 },
+  // Centre of the octagonal roof on Google's satellite imagery (Google has no address point for 15-1077).
+  geo: { lat: 19.61513, lng: -154.95389 },
 
   facts: {
     beds: 2,

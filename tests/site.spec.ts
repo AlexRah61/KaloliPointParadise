@@ -603,7 +603,7 @@ test.describe('page', () => {
     await section.evaluate((el) => el.scrollIntoView({ block: 'start' }));
     const map = section.locator('iframe[data-map]');
     await expect(map).toHaveAttribute('title', /15-1077 Amau Rd/);
-    await expect(map).toHaveAttribute('src', /q=19\.615055,-154\.95381&z=14&/);
+    await expect(map).toHaveAttribute('src', /q=19\.61513,-154\.95389&z=14&/);
     await expect(map).toBeVisible();
     for (const [name, src] of [['Island', /&z=9&/], ['Lot', /&z=18&t=k&/], ['Neighborhood', /&z=14&/]] as const) {
       const button = section.getByRole('button', { name: new RegExp(`^${name}`) });
@@ -612,7 +612,7 @@ test.describe('page', () => {
       await expect(map).toHaveAttribute('src', src);
     }
     await expect(section.getByRole('link', { name: /Explore Puna district/ })).toHaveAttribute('href', 'https://iokuarealestate.com/neighborhoods/puna');
-    await expect(section.getByRole('link', { name: /Get directions/ })).toHaveAttribute('href', /maps\/dir\/\?api=1&destination=19\.615055,-154\.95381$/);
+    await expect(section.getByRole('link', { name: /Get directions/ })).toHaveAttribute('href', /maps\/dir\/\?api=1&destination=19\.61513,-154\.95389$/);
   });
 
   test('Watch the film brings the whole player, controls included, into view', { tag: '@phone' }, async ({ page }) => {
@@ -668,41 +668,41 @@ test.describe('page', () => {
     expect(await views.nth(1).locator('img').evaluate((img: HTMLImageElement) => img.currentSrc), 'the owners’ retouched wraparound photo').toContain('lanai-wraparound');
   });
 
-  test('light to night ends on the Milky Way, uncropped, large and never under text', { tag: '@phone' }, async ({ page }) => {
+  test('light to night: four owner photographs in two offset pairs, ending on the stars', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
-    const night = page.locator('#evenings .night-media');
-    await night.scrollIntoViewIfNeeded();
-    await expect.poll(() => night.locator('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-    const m = await page.evaluate(() => {
-      const media = document.querySelector('#evenings .night-media')!;
-      const img = media.querySelector('img')!;
-      const r = media.getBoundingClientRect();
-      const ir = img.getBoundingClientRect();
-      const texts = [...document.querySelectorAll('#evenings .night-copy *')].map((el) => el.getBoundingClientRect());
-      const overlap = texts.some((t) => t.width > 0 && t.right > r.left && t.left < r.right && t.bottom > r.top && t.top < r.bottom);
-      return {
-        ratio: ir.width / ir.height,
-        natural: img.naturalWidth / img.naturalHeight,
-        fit: getComputedStyle(img).objectFit,
-        h: r.height,
-        w: r.width,
-        vh: window.innerHeight,
-        vw: window.innerWidth,
-        overlap,
-        bg: getComputedStyle(media.closest('.night')!).backgroundImage,
-        mask: (() => {
-          const s = getComputedStyle(media);
-          return s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage ?? '');
-        })(),
-      };
+    const section = page.locator('#evenings');
+    await expect(section.locator('#evenings-title')).toHaveText('From rainbows to the stars.');
+    await expect(section).not.toContainText(/milky way/i);
+    const moments = section.locator('.moment');
+    await expect(moments).toHaveCount(4);
+    for (const [i, label] of ['01 Daylight', '02 Sunset', '03 Dusk', '04 Night'].entries()) {
+      await expect(moments.nth(i).locator('.time')).toHaveText(label);
+      await moments.nth(i).scrollIntoViewIfNeeded();
+      await expect.poll(() => moments.nth(i).locator('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    }
+    const boxes = await moments.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top + scrollY, bottom: r.bottom + scrollY };
+      }),
+    );
+    const box = (i: number) => boxes[i]!;
+    if (page.viewportSize()!.width >= 768) {
+      for (const [a, b] of [[0, 1], [2, 3]] as const) {
+        expect(box(b).left, `${a + 1} and ${b + 1} side by side`).toBeGreaterThanOrEqual(box(a).right);
+        expect(box(b).top, `${b + 1} drops below ${a + 1}`).toBeGreaterThan(box(a).top);
+        expect(box(b).top, `${b + 1} still beside ${a + 1}`).toBeLessThan(box(a).bottom);
+      }
+      expect(box(2).top, 'dusk below daylight, never over it').toBeGreaterThan(box(0).bottom);
+      expect(box(3).top, 'night below sunset, never over it').toBeGreaterThan(box(1).bottom);
+    } else {
+      for (let i = 1; i < 4; i++) expect(box(i).top, 'stacked on phones').toBeGreaterThan(box(i - 1).bottom);
+    }
+    const night = await moments.nth(3).locator('img').evaluate((img: HTMLImageElement) => {
+      const r = img.getBoundingClientRect();
+      return { natural: img.naturalWidth / img.naturalHeight, shown: r.width / r.height };
     });
-    expect(Math.abs(m.ratio - m.natural), 'shown at its own proportions').toBeLessThan(0.01);
-    expect(m.fit).toBe('contain');
-    expect(m.overlap, 'no text over the photograph').toBe(false);
-    expect(m.bg).toContain('gradient');
-    expect(m.mask.match(/linear-gradient/g) ?? [], 'feathered into the field on all four edges').toHaveLength(2);
-    if (m.vw >= 900 || (m.vh <= 500 && m.vw >= 560)) expect(m.h, 'as tall as the screen allows').toBeGreaterThanOrEqual(Math.min(m.vh * 0.85, 1195, m.vw * 0.7));
-    else expect(m.w, 'full width on phones').toBeGreaterThanOrEqual(Math.min(m.vw - 60, 540));
+    expect(Math.abs(night.natural - night.shown), 'the 3:4 night photograph fills its 3:4 frame uncropped').toBeLessThan(0.01);
     const order = await page.evaluate(() => [...document.querySelectorAll('main > section, main > div > section, body section[id]')].map((s) => s.id).filter(Boolean));
     expect(order.indexOf('evenings'), 'after Kaloli Point').toBeGreaterThan(order.indexOf('location'));
     expect(order.indexOf('evenings'), 'before the showing request').toBeLessThan(order.indexOf('showing'));
