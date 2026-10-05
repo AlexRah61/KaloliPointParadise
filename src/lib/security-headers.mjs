@@ -25,7 +25,8 @@ export function securityHeaders({ ga = false, meta = false, noindex = false, non
     "font-src 'self'",
     "media-src 'self' blob:",
     `connect-src ${src("'self'", 'https://challenges.cloudflare.com', ga && 'https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com', meta && 'https://www.facebook.com https://connect.facebook.net')}`,
-    'frame-src https://challenges.cloudflare.com',
+    // Turnstile, and the keyless Google Maps embed in the location section.
+    'frame-src https://challenges.cloudflare.com https://www.google.com',
     "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",

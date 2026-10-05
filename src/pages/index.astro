@@ -8,6 +8,7 @@ import FilmGallery from '../components/FilmGallery.astro';
 import Lifestyle from '../components/Lifestyle.astro';
 import Evenings from '../components/Evenings.astro';
 import ShowingForm from '../components/ShowingForm.astro';
+import LocationMap from '../components/LocationMap.astro';
 import { getImage } from 'astro:assets';
 import { property, SITE_URL } from '../data/property';
 import { media } from '../data/media';
@@ -102,4 +103,5 @@ const jsonLd = [
   <Lifestyle />
   <Evenings />
   <ShowingForm />
+  <LocationMap />
 </Base>

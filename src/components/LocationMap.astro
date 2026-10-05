@@ -1,0 +1,136 @@
+---
+import { ArrowUpRight } from '@lucide/astro';
+import { property } from '../data/property';
+
+const a = property.address;
+const { lat, lng } = property.geo;
+// Keyless Google Maps embed. The page cannot drive the embed's zoom, so each scale reloads it at its own zoom.
+const embed = (z: number, satellite = false) =>
+  `https://www.google.com/maps?q=${lat},${lng}&z=${z}${satellite ? '&t=k' : ''}&hl=en&output=embed`;
+const VIEWS = [
+  { label: 'Island', note: 'Hawaiʻi Island', src: embed(9), satellite: false },
+  { label: 'Neighborhood', note: 'Kaloli Point', src: embed(14), satellite: false },
+  { label: 'Lot', note: 'From above', src: embed(18, true), satellite: true },
+];
+const START = 1;
+const directions = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+const PUNA = 'https://iokuarealestate.com/neighborhoods/puna';
+---
+
+<section class="map-section on-dark" id="map" aria-labelledby="map-title">
+  <div class="container">
+    <div class="map-head">
+      <div>
+        <p class="eyebrow">Location</p>
+        <h2 class="display display--lg" id="map-title">Where to <em>find it.</em></h2>
+      </div>
+      <p class="map-address">
+        <span class="addr">{a.streetDisplay}, {a.cityDisplay}, {a.stateDisplay} {a.zip}</span>
+        <span class="area">{a.neighborhood} · {a.subdivision} · {a.district}, {a.island}</span>
+      </p>
+    </div>
+
+    <div class="map-views" role="group" aria-label="Map scale">
+      {VIEWS.map((v, i) => (
+        <button class="map-view" type="button" aria-pressed={i === START ? 'true' : 'false'} data-map-view={v.src} data-satellite={v.satellite ? '' : undefined}>
+          <span class="view-label">{v.label}</span>
+          <span class="view-note">{v.note}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="map-frame" data-map-frame data-satellite={VIEWS[START]!.satellite ? '' : undefined}>
+      <iframe title={`Google map of ${a.full}`} src={VIEWS[START]!.src} loading="lazy" allowfullscreen data-map></iframe>
+    </div>
+
+    <div class="map-foot">
+      <p class="map-hint">Drag to explore. Pinch or Ctrl + scroll to zoom, or use the zoom buttons in the map’s controls.</p>
+      <div class="map-links">
+        <a class="text-link" href={directions} target="_blank" rel="noopener">
+          <span>Get directions</span><ArrowUpRight aria-hidden="true" /><span class="visually-hidden">(opens in a new tab)</span>
+        </a>
+        <a class="text-link" href={PUNA} target="_blank" rel="noopener">
+          <span>Explore Puna district</span><ArrowUpRight aria-hidden="true" /><span class="visually-hidden">(opens in a new tab)</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .map-section {
+    background: var(--ink);
+    color: var(--stone);
+    padding-bottom: clamp(1rem, 3vw, 2rem);
+  }
+  .map-section > .container { padding-top: clamp(3rem, 6vw, 5rem); border-top: 1px solid color-mix(in srgb, var(--ivory) 12%, transparent); }
+  .map-head { display: grid; gap: 1.25rem 2rem; align-items: end; margin-bottom: clamp(1.75rem, 4vw, 2.75rem); }
+  .map-head .display { margin-top: 1.25rem; }
+  .map-address { display: grid; gap: 0.35rem; }
+  .addr { font-family: var(--font-serif); font-size: var(--step-1); line-height: 1.25; color: var(--ivory); }
+  .area { font-size: var(--step--1); color: var(--sand); }
+  @media (min-width: 900px) {
+    .map-head { grid-template-columns: minmax(0, 1fr) auto; }
+    .map-address { justify-items: end; text-align: right; padding-bottom: 0.4rem; }
+  }
+
+  /* Three scales, from the island down to the lot; the selected one reads like the level tabs. */
+  .map-views {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid color-mix(in srgb, var(--ivory) 16%, transparent);
+    margin-bottom: 1.25rem;
+  }
+  .map-view {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: start;
+    align-content: start;
+    min-height: 44px;
+    padding: 0.8rem 0.75rem 0.95rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    background: none;
+    color: var(--sand);
+    text-align: left;
+    transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+  }
+  .view-label { font-size: 0.66rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; }
+  .view-note { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.2; color: var(--bronze-light); }
+  .map-view:hover { color: var(--ivory); }
+  .map-view[aria-pressed='true'] {
+    color: var(--ivory);
+    border-bottom-color: var(--bronze-light);
+    background: linear-gradient(0deg, color-mix(in srgb, var(--bronze-light) 14%, transparent), transparent 80%);
+  }
+  @media (min-width: 768px) {
+    .map-views { display: flex; gap: clamp(1rem, 3vw, 2.75rem); }
+    .map-view { padding-inline: 0.85rem; }
+    .view-label { font-size: 0.72rem; letter-spacing: 0.18em; }
+  }
+
+  /* Explicit heights, not aspect-ratio: a minimum height carried through a ratio would widen the frame past the page. */
+  .map-frame {
+    position: relative;
+    height: clamp(20rem, 39vw, 75vh);
+    height: clamp(20rem, 39vw, 75svh);
+    overflow: hidden;
+    background: var(--charcoal);
+    border: 1px solid color-mix(in srgb, var(--bronze-light) 30%, transparent);
+  }
+  /* Google's palette, warmed and muted toward the site's ivory and stone; satellite imagery stays natural. */
+  .map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: saturate(0.5) sepia(0.12) contrast(1.02); }
+  .map-frame[data-satellite] iframe { filter: none; }
+  @media (max-width: 767px) {
+    .map-frame {
+      height: min(calc((100vw - 2 * var(--gutter)) * 1.25), 80vh);
+      height: min(calc((100vw - 2 * var(--gutter)) * 1.25), 80svh);
+    }
+  }
+
+  .map-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 1rem 2rem; margin-top: 1.1rem; }
+  .map-hint { max-width: 48ch; font-size: var(--step--1); color: var(--sand); }
+  .map-links { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; }
+  .map-links .text-link { color: var(--ivory); }
+</style>

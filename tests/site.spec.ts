@@ -527,12 +527,13 @@ test.describe('page', () => {
 
   test('phone links dial the listing agent and are tracked', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByText('Misti R. Tyrin', { exact: true }), 'one agent card, in the footer').toHaveCount(1);
     await page.evaluate(() => document.addEventListener('click', (e) => (e.target as Element).closest('a[href^="tel:"]') && e.preventDefault(), true));
-    const tel = page.locator('#agent a[href^="tel:"]');
+    const tel = page.locator('.site-footer .agent-card a[href^="tel:"]');
     await expect(tel).toHaveAttribute('href', 'tel:+18087568811');
-    await tel.scrollIntoViewIfNeeded();
+    await tel.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await tel.click();
-    expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'agent', contact_method: 'phone' }]);
+    expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'footer', contact_method: 'phone' }]);
   });
 
   test('the header shows the listing agent’s number beside the section links', { tag: '@phone' }, async ({ page }) => {
@@ -592,6 +593,26 @@ test.describe('page', () => {
     await site.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await site.click();
     expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'footer', contact_method: 'website' }]);
+  });
+
+  test('the map shows the property, zooms between scales and links to directions and the Puna district', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const order = await page.evaluate(() => [...document.querySelectorAll('section[id]')].map((s) => s.id));
+    expect(order.indexOf('map'), 'after the showing request').toBeGreaterThan(order.indexOf('showing'));
+    const section = page.locator('#map');
+    await section.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    const map = section.locator('iframe[data-map]');
+    await expect(map).toHaveAttribute('title', /15-1077 Amau Rd/);
+    await expect(map).toHaveAttribute('src', /q=19\.615055,-154\.95381&z=14&/);
+    await expect(map).toBeVisible();
+    for (const [name, src] of [['Island', /&z=9&/], ['Lot', /&z=18&t=k&/], ['Neighborhood', /&z=14&/]] as const) {
+      const button = section.getByRole('button', { name: new RegExp(`^${name}`) });
+      await button.click();
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await expect(map).toHaveAttribute('src', src);
+    }
+    await expect(section.getByRole('link', { name: /Explore Puna district/ })).toHaveAttribute('href', 'https://iokuarealestate.com/neighborhoods/puna');
+    await expect(section.getByRole('link', { name: /Get directions/ })).toHaveAttribute('href', /maps\/dir\/\?api=1&destination=19\.615055,-154\.95381$/);
   });
 
   test('Watch the film brings the whole player, controls included, into view', { tag: '@phone' }, async ({ page }) => {

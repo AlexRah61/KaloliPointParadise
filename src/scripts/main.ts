@@ -7,6 +7,7 @@ import { initLevelTabs } from './levels';
 import { initGallery } from './gallery';
 import { initFilm } from './film';
 import { initShowingForm } from './form';
+import { initMap } from './map';
 import { initMotion } from './motion';
 
 captureAttribution();
@@ -19,4 +20,5 @@ initLevelTabs();
 initGallery();
 initFilm();
 initShowingForm();
+initMap();
 void initMotion();
