@@ -165,6 +165,9 @@ export const media = {
   contextInland: photo('DJI_20261001134233_0716_D.jpg', 'Aerial view across the treetops of Hawaiian Paradise Park', { caption: 'Hawaiian Paradise Park' }),
   aerialSite: photo('DJI_20261001133658_0627_D.jpg', 'Aerial view of the house, lawn, solar array and water catchment tank', { caption: 'The site from above' }),
   filmOcean: still('film-ocean-aerial.jpg', 'Aerial view over treetops toward the Pacific Ocean', { caption: 'Toward the ocean', focus: '50% 50%' }),
+  filmPoster: still('film-poster-residence.jpg', 'Aerial view of the octagonal residence among tall pines, from the property film', {
+    caption: 'From the property film', focus: '45% 50%',
+  }),
 
   // Kaloli Point coastline (owner photos; the honu shots carry GPS on the Kaloli Point shore)
   lookout: phone('kaloli-lookout.jpg', 'unnamed.jpg', 'A visitor with arms outstretched on the black lava headland at the Kaloli Point lookout, surf and open Pacific beyond', {

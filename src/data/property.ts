@@ -41,7 +41,13 @@ export const property = {
     renovated: 2023,
     rockWallFeet: 450,
   },
-  factsLine: '2 Bed · 3 Bath · 1,968 SF · 0.50 AC',
+  factsLine: '2 Bed · 3 Bath · 1,968 SF · 0.50 Acre',
+
+  campaign: {
+    title: 'Kaloli Point',
+    tagline: 'Paradise on Hawaiʻi Island',
+    addressLine: '15–1077 Amau Rd · Keaʻau, Hawaiʻi',
+  },
 
   details: [
     { label: 'Living area', value: '1,968 sq ft' },
@@ -88,21 +94,23 @@ export const property = {
     intro: 'Extensively renovated in 2023 and lovingly maintained.',
     groups: [
       {
-        title: 'Interiors',
-        items: [
-          'LifeProof vinyl flooring',
-          'New kitchen cabinets, countertops and appliances',
-          'Updated bathroom vanities, fixtures and toilets',
-          'Updated main-bath tub',
-          'Interior paint',
-        ],
+        title: 'Kitchen & interiors',
+        summary: 'New kitchen, new floors, fresh paint.',
+        items: ['New kitchen cabinets, countertops and appliances', 'LifeProof vinyl flooring', 'Interior paint'],
       },
       {
-        title: 'Systems',
+        title: 'Baths',
+        summary: 'Updated vanities, fixtures and tub.',
+        items: ['Updated bathroom vanities, fixtures and toilets', 'Updated main-bath tub'],
+      },
+      {
+        title: 'Water & catchment',
+        summary: 'New heater, pump and catchment liner.',
         items: ['New water heater', 'New water pump and pressure tank', 'New catchment liner'],
       },
       {
-        title: 'Exterior',
+        title: 'Exterior & lanais',
+        summary: 'Siding, lanai and paint work.',
         items: ['Significant siding improvements', 'Extensive second-story lanai work', 'Exterior paint'],
       },
     ],
@@ -125,7 +133,8 @@ export const property = {
   // A showing is always a request: never "book", "reserve" or "confirm" until a real scheduling system exists.
   cta: {
     primary: 'Request Private Showing',
-    film: 'Watch the property film',
+    explore: 'Explore the Residence',
+    film: 'Watch the film',
     call: 'Call the listing agent',
     submit: 'Send Showing Request',
   },
@@ -135,15 +144,15 @@ export const property = {
     mp4: '/media/film/film-1080p.mp4',
     durationSeconds: 56,
     durationLabel: '0:56',
+    // Silent hero loop cut from the film (tools/build-media.mjs); the master never loads with the page.
+    heroWide: '/media/hero/hero-wide-v1.mp4',
+    heroTall: '/media/hero/hero-tall-v1.mp4',
   },
-
-  // UGC: only one film exists today. Flip to true and set src when a real UGC clip is delivered.
-  ugc: { show: false, src: '', poster: '', title: '' },
 
   seo: {
     title: '15–1077 Amau Rd, Keaau, HI 96749 | Kaloli Point Residence',
     description:
-      'Octagonal tri-level home on 0.50 acre of mature tropical garden in Kaloli Point, Hawaiian Paradise Park. 2 bed, 3 bath, 1,968 sq ft, three lanais, renovated 2023. Offered at $679,000. Request a private showing.',
+      'Octagonal three-level home on a private tropical half acre at Kaloli Point, Hawaiian Paradise Park. 2 bed, 3 bath, 1,968 sq ft, renovated 2023. $679,000.',
     ogImageAlt: 'Aerial view of 15–1077 Amau Rd, a three-level octagonal home set in tropical gardens in Kaloli Point, Hawaiʻi',
   },
 

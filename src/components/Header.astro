@@ -8,10 +8,10 @@ interface Props {
 }
 const { minimal = false } = Astro.props;
 const links = [
-  { href: '/#architecture', label: 'The home' },
+  { href: '/#residence', label: 'Residence' },
+  { href: '/#levels', label: 'Three levels' },
   { href: '/#lanais', label: 'Lanais' },
-  { href: '/#gallery', label: 'Gallery' },
-  { href: '/#film', label: 'Film' },
+  { href: '/#film', label: 'Film & gallery' },
   { href: '/#location', label: 'Kaloli Point' },
 ];
 ---
@@ -97,9 +97,7 @@ const links = [
     transition: height 0.4s var(--ease);
   }
   /* Once past the hero the bar tightens so it covers as little photography as possible. */
-  @media (min-width: 1100px) {
-    .site-header[data-state='solid'] .bar { height: 62px; }
-  }
+  .site-header[data-state='solid'] .bar { height: var(--header-h-solid); }
   .brand {
     display: inline-flex;
     align-items: center;

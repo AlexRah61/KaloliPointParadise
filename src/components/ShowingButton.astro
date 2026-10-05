@@ -3,18 +3,10 @@
 // experience (sheet with the one form); without JavaScript it falls back to the in-page form.
 import { ArrowRight } from '@lucide/astro';
 import { property } from '../data/property';
+import type { CTA_ORIGINS } from '../lib/server/schema';
 
-export type CtaOrigin =
-  | 'hero'
-  | 'desktop_header'
-  | 'mobile_sticky'
-  | 'menu'
-  | 'property_details'
-  | 'gallery'
-  | 'film'
-  | 'final_cta'
-  | 'footer'
-  | 'not_found';
+// Derived from the API allowlist, so a new entry point cannot silently lose its attribution.
+export type CtaOrigin = Exclude<(typeof CTA_ORIGINS)[number], 'inline_form'>;
 
 interface Props {
   origin: CtaOrigin;

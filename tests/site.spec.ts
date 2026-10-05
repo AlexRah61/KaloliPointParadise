@@ -23,7 +23,8 @@ test.describe('page', () => {
     expect(ld.mainEntity.numberOfBedrooms).toBe(2);
     expect(ld.mainEntity.floorSize.value).toBe(1968);
     await expect(page.locator('h1')).toHaveCount(1);
-    await expect(page.locator('h1')).toContainText('15–1077');
+    await expect(page.locator('h1')).toContainText('Kaloli Point');
+    await expect(page.locator('[data-hero]')).toContainText('15–1077 Amau Rd');
     await page.waitForTimeout(1500);
     expect(errors).toEqual([]);
     expect(await events(page)).toContain('property_view');
@@ -61,12 +62,53 @@ test.describe('page', () => {
     await page.goto('/');
     const hero = page.locator('[data-hero]');
     await expect(hero).toContainText('$679,000');
-    await expect(hero).toContainText('2 Bed · 3 Bath · 1,968 SF · 0.50 AC');
+    await expect(hero).toContainText('2 Bed · 3 Bath · 1,968 SF · 0.50 Acre');
+    await expect(hero).toContainText('Paradise on Hawaiʻi Island');
     await expect(hero.getByRole('link', { name: /request private showing/i })).toBeVisible();
-    await expect(hero.getByRole('link', { name: /watch the property film/i })).toBeAttached();
+    await expect(hero.getByRole('link', { name: /explore the residence/i })).toBeVisible();
+    await expect(hero.getByRole('link', { name: /watch the film/i })).toBeAttached();
     const box = await hero.boundingBox();
     const vp = page.viewportSize()!;
     expect(box!.height).toBeGreaterThanOrEqual(vp.height * 0.95);
+  });
+
+  test('hero loop is a separate silent file that never loads with the page or the full film', async ({ page, request }) => {
+    const media: string[] = [];
+    let atLoad: string[] | null = null;
+    page.on('request', (r) => /\/media\//.test(r.url()) && media.push(new URL(r.url()).pathname));
+    page.on('load', () => (atLoad = [...media]));
+    await page.goto('/');
+    const html = await (await request.get('/')).text();
+    expect(html, 'the page ships the loop without a source; it is attached after load').not.toMatch(/<video[^>]*data-hero-video[^>]*\ssrc=/);
+    const video = page.locator('[data-hero-video]');
+    expect(await video.evaluate((v: HTMLVideoElement) => [v.muted, v.loop, v.playsInline, v.preload])).toEqual([true, true, true, 'none']);
+    expect(atLoad, 'no video is requested before the page has loaded').toEqual([]);
+    await page.waitForTimeout(3500);
+    expect(media.filter((p) => p.startsWith('/media/film/')), 'the 56-second film waits for its play button').toEqual([]);
+    for (const name of ['wide', 'tall']) {
+      const src = (await video.getAttribute(`data-src-${name}`))!;
+      const res = await request.get(src);
+      expect(res.status()).toBe(200);
+      expect(res.headers()['content-type']).toContain('video/mp4');
+      expect((await res.body()).length).toBeLessThan(4 * 1024 * 1024);
+    }
+  });
+
+  test('three levels: tabs switch panels by click and keyboard', async ({ page }) => {
+    await page.goto('/');
+    const tabs = page.getByRole('tablist', { name: 'The three levels' });
+    await tabs.scrollIntoViewIfNeeded();
+    await expect(page.locator('#level-1')).toBeVisible();
+    await expect(page.locator('#level-2')).toBeHidden();
+    await tabs.getByRole('tab', { name: /living level/i }).click();
+    await expect(page.locator('#level-2')).toBeVisible();
+    await expect(page.locator('#level-1')).toBeHidden();
+    await tabs.getByRole('tab', { name: /living level/i }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(tabs.getByRole('tab', { name: /primary retreat/i })).toBeFocused();
+    await expect(page.locator('#level-3')).toBeVisible();
+    await page.locator('#level-3 details summary').click();
+    await expect(page.locator('#level-3 .rooms')).toContainText('Primary bedroom');
   });
 
   test('hero CTA opens the request sheet in place and is tracked', async ({ page }) => {
@@ -88,6 +130,22 @@ test.describe('page', () => {
     await expect(page.locator('[data-form-home] #showing-form')).toHaveCount(1);
     await expect(cta).toBeFocused();
     expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+  });
+
+  test('a request started in the sheet is still there when reopened from another CTA', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('[data-hero]').getByRole('link', { name: /request private showing/i }).click();
+    const sheet = page.locator('#showing-sheet');
+    await sheet.getByLabel('Full name').fill('Continuity Check');
+    await sheet.getByLabel('Preferred time').selectOption('10:00');
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, document.getElementById('gallery')!.offsetTop));
+    await page.waitForTimeout(600);
+    await page.locator('[data-showing-cta="mobile_sticky"]:visible, [data-showing-cta="desktop_header"]:visible').first().click();
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByLabel('Full name')).toHaveValue('Continuity Check');
+    await expect(sheet.getByLabel('Preferred time')).toHaveValue('10:00');
   });
 
   test('Request Private Showing stays reachable from top to footer and back', { tag: '@phone' }, async ({ page }) => {
@@ -114,7 +172,7 @@ test.describe('page', () => {
         return {
           y: Math.round(window.scrollY),
           ctas: [...document.querySelectorAll<HTMLElement>('[data-showing-cta]')].filter(usable).map((e) => e.dataset.showingCta!),
-          form: Math.max(share('#showing'), share('#experience')),
+          form: share('#showing'),
         };
       });
 
@@ -201,7 +259,7 @@ test.describe('page', () => {
     await page.evaluate(() => window.scrollTo(0, document.getElementById('gallery')!.offsetTop));
     await expect.poll(shown).toBe(true);
 
-    await page.locator('a[data-gallery="collection"]').first().click();
+    await page.locator('a[data-gallery="curated"]').first().click();
     await expect(page.locator('.pswp')).toBeVisible();
     await page.waitForTimeout(500);
     expect(await atBar(), 'gallery viewer and its controls sit above the bar').toBe('gallery');
@@ -239,7 +297,7 @@ test.describe('page', () => {
   test('navigation reaches every chapter', { tag: '@phone' }, async ({ page, isMobile }) => {
     await page.goto('/');
     const header = page.locator('[data-header]');
-    for (const [label, id] of [['Lanais', 'lanais'], ['Gallery', 'gallery'], ['Kaloli Point', 'location']] as const) {
+    for (const [label, id] of [['Three levels', 'levels'], ['Film & gallery', 'film'], ['Kaloli Point', 'location']] as const) {
       const toggle = header.locator('[data-menu-toggle]');
       if (await toggle.isVisible()) {
         await toggle.click();
@@ -262,8 +320,10 @@ test.describe('page', () => {
 
   test('gallery opens full screen, navigates by keyboard and closes', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
-    const tile = page.locator('a[data-gallery="collection"]').first();
-    const total = await page.locator('a[data-gallery="collection"]').count();
+    const tile = page.locator('a[data-gallery="curated"]').first();
+    const total = await page.locator('a[data-gallery="curated"]').count();
+    expect(total, 'an edited landing-page gallery').toBeGreaterThanOrEqual(8);
+    expect(total).toBeLessThanOrEqual(12);
     await tile.scrollIntoViewIfNeeded();
     await tile.click();
     const pswp = page.locator('.pswp');
@@ -279,6 +339,125 @@ test.describe('page', () => {
     await page.keyboard.press('Escape');
     await expect(pswp).toHaveCount(0);
     expect(await events(page)).toContain('gallery_open');
+  });
+
+  test('all 46 photographs open in one collection, with the viewer inside it', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const open = page.locator('[data-open-all]');
+    await open.scrollIntoViewIfNeeded();
+    await open.click();
+    const all = page.locator('#all-photos');
+    await expect(all).toBeVisible();
+    await expect(all.locator('a[data-gallery="all"]')).toHaveCount(46);
+    await expect(page.locator('[data-sticky-cta]')).toHaveAttribute('data-visible', 'false');
+    await all.locator('a[data-gallery="all"]').nth(5).click();
+    const caption = all.locator('.pswp__kp-caption');
+    await expect(caption).toContainText('6 / 46');
+    await page.waitForTimeout(700);
+    await page.keyboard.press('Escape');
+    await expect(all.locator('.pswp')).toHaveCount(0);
+    await expect(all).toBeVisible();
+    // The collection ends in the same showing experience, opened on top of it.
+    const end = all.locator('.all-end [data-showing-cta="gallery"]');
+    await end.scrollIntoViewIfNeeded();
+    await end.click();
+    const sheet = page.locator('#showing-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('#showing-form')).toHaveAttribute('data-cta-origin', 'gallery');
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(all).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.style.overflow), 'page stays locked under the collection').toBe('hidden');
+    await expect(end).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(all).toBeHidden();
+    await expect(open).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('');
+  });
+
+  test('the hero pause control never sits on the type', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const overlaps = await page.evaluate(() => {
+      const toggle = document.querySelector<HTMLElement>('[data-hero-toggle]')!;
+      toggle.hidden = false; // shown once the loop plays; position it as visitors would see it
+      const t = toggle.getBoundingClientRect();
+      return [...document.querySelectorAll('[data-hero] .hero-content *')]
+        .flatMap((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return [...range.getClientRects()].map((r) => ({ r, text: (el.textContent ?? '').trim().slice(0, 30) }));
+        })
+        .filter(({ r }) => r.width > 0 && r.right > t.left && r.left < t.right && r.bottom > t.top && r.top < t.bottom)
+        .map(({ text }) => text);
+    });
+    expect(overlaps).toEqual([]);
+  });
+
+  test('keyboard only: skip link, visible focus, hero request sheet and back', async ({ page, isMobile, browserName }) => {
+    test.skip(isMobile, 'keyboard journey runs on desktop and tablet projects');
+    // WebKit, like Safari's default setting, never moves Tab focus to links (Safari users enable "Press Tab to
+    // highlight each item"); the link journey is asserted in the Chromium projects.
+    test.skip(browserName === 'webkit', 'WebKit Tab skips links by platform design');
+    const TAB = 'Tab';
+    await page.goto('/');
+    await page.keyboard.press(TAB);
+    await expect(page.locator('.skip-link')).toBeFocused();
+    const problems: string[] = [];
+    let onHeroCta = false;
+    for (let i = 0; i < 30 && !onHeroCta; i++) {
+      await page.keyboard.press(TAB);
+      const s = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el || el === document.body) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || cs.boxShadow !== 'none';
+        const header = document.querySelector('[data-header]')!.getBoundingClientRect();
+        const inHeader = !!el.closest('[data-header]');
+        return {
+          name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30),
+          hero: el.matches('[data-hero] [data-showing-cta]'),
+          ring,
+          onScreen: r.bottom > 0 && r.top < innerHeight && r.width > 0,
+          underHeader: !inHeader && r.top < header.bottom,
+        };
+      });
+      if (!s) continue;
+      if (!s.ring) problems.push(`no focus ring on "${s.name}"`);
+      if (!s.onScreen) problems.push(`"${s.name}" focused off screen`);
+      if (s.underHeader) problems.push(`"${s.name}" focused under the header`);
+      onHeroCta = s.hero;
+    }
+    expect(onHeroCta, 'the hero CTA is reachable by Tab').toBe(true);
+    expect(problems).toEqual([]);
+    await page.keyboard.press('Enter');
+    const sheet = page.locator('#showing-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(page.locator('#sheet-title')).toBeFocused();
+    await page.keyboard.press(TAB);
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#showing-sheet')), 'focus stays inside the sheet').toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+    await expect(page.locator('[data-hero] [data-showing-cta]')).toBeFocused();
+  });
+
+  test('hero loops answer byte-range requests, as Safari and iOS require for video', async ({ request }, info) => {
+    test.skip(info.project.name !== 'desktop-1440', 'server behaviour, checked once');
+    for (const file of ['/media/hero/hero-tall-v1.mp4', '/media/hero/hero-wide-v1.mp4']) {
+      const r = await request.get(file, { headers: { Range: 'bytes=0-1' } });
+      expect(r.status(), file).toBe(206);
+      expect(r.headers()['content-range'], file).toMatch(/^bytes 0-1\/\d{6,}$/);
+      expect(r.headers()['content-type'], file).toBe('video/mp4');
+      expect((await r.body()).length, file).toBe(2);
+    }
+  });
+
+  test('every showing entry point is attributed by the API', async ({ page }) => {
+    const { CTA_ORIGINS } = await import('../src/lib/server/schema');
+    await page.goto('/');
+    const origins = await page.locator('[data-showing-cta]').evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLElement).dataset.showingCta))]);
+    expect(origins.length).toBeGreaterThanOrEqual(8);
+    for (const o of origins) expect(CTA_ORIGINS as readonly string[], `origin ${o}`).toContain(o);
   });
 
   test('floor plans open the dimensioned versions', async ({ page }) => {
@@ -320,7 +499,8 @@ test.describe('page', () => {
     await page.waitForTimeout(1200);
     const hidden = await page.evaluate(() => [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length);
     expect(hidden).toBe(0);
-    expect(await page.evaluate(() => document.documentElement.classList.contains('lenis'))).toBe(false);
+    await page.waitForTimeout(3000);
+    expect(await page.locator('[data-hero-video]').evaluate((v: HTMLVideoElement) => v.currentSrc), 'reduced motion keeps the still photograph').toBe('');
   });
 
   test('phone links dial the listing agent and are tracked', async ({ page }) => {

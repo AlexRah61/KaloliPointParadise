@@ -1,0 +1,191 @@
+---
+import { ChevronDown } from '@lucide/astro';
+import Zoomable from './Zoomable.astro';
+import { media, floorPlans } from '../data/media';
+import { property } from '../data/property';
+import { SIZES } from '../lib/sizes';
+
+// One strong photograph per level; the kitchen and primary bath are saved for the next chapter.
+const LEVELS = {
+  'level-1': { photo: media.flexRoom, plan: floorPlans.level1, dim: floorPlans.level1Dim },
+  'level-2': { photo: media.familyRoom, plan: floorPlans.level2, dim: floorPlans.level2Dim },
+  'level-3': { photo: media.primaryBedroom, plan: floorPlans.level3, dim: floorPlans.level3Dim },
+} as const;
+---
+
+<section class="section levels" id="levels" aria-labelledby="levels-title">
+  <div class="container">
+    <div class="grid-12 head">
+      <div class="head-title">
+        <p class="eyebrow" data-reveal>Architecture</p>
+        <h2 class="display display--lg" id="levels-title" data-reveal>Three levels. <em>Three distinct ways to live.</em></h2>
+      </div>
+      <p class="body-copy head-body" data-reveal>
+        One stair links the garden level, the living floor and the primary retreat — and every level opens to the outdoors.
+      </p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="The three levels" hidden data-level-tabs>
+      {property.levels.map((lvl, i) => (
+        <button
+          class="tab"
+          type="button"
+          role="tab"
+          id={`tab-${lvl.id}`}
+          aria-controls={lvl.id}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          tabindex={i === 0 ? 0 : -1}
+        >
+          <span class="tab-num">{lvl.number}</span>
+          <span>{lvl.name}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="panels">
+      {property.levels.map((lvl) => {
+        const l = LEVELS[lvl.id as keyof typeof LEVELS];
+        return (
+          <article class="panel grid-12" id={lvl.id} aria-labelledby={`${lvl.id}-name`} data-level-panel>
+            <Zoomable item={l.photo} gallery="levels" class="panel-photo" frameClass="ar-3x2" sizes={SIZES.eightCols} />
+            <div class="panel-text">
+              <p class="level-num" aria-hidden="true">{lvl.number}</p>
+              <h3 class="level-name" id={`${lvl.id}-name`}>{lvl.name}</h3>
+              <p class="level-summary">{lvl.summary}</p>
+              <Zoomable
+                item={l.plan}
+                zoomItem={l.dim}
+                gallery="plans"
+                class="plan"
+                frameClass="plan-frame"
+                sizes="(min-width: 1000px) 22vw, 60vw"
+                caption="Floor plan · open with dimensions"
+              />
+              <details class="drawer">
+                <summary>Room dimensions <ChevronDown aria-hidden="true" /></summary>
+                <ul class="rooms" role="list">
+                  {lvl.rooms.map((r) => <li>{r}</li>)}
+                </ul>
+              </details>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+
+    <details class="drawer specs">
+      <summary>Property specifications <ChevronDown aria-hidden="true" /></summary>
+      <dl class="spec-list">
+        {property.details.map((d) => (
+          <div>
+            <dt>{d.label}</dt>
+            <dd>{d.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p class="plan-note">{property.planNote}</p>
+    </details>
+  </div>
+</section>
+
+<style>
+  .levels { padding-top: clamp(3rem, 6vw, 5rem); }
+  .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2rem, 4vw, 3.5rem); }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.25rem; max-width: 16ch; }
+  .head-body { grid-column: 1 / -1; }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 8; }
+    .head-body { grid-column: 9 / -1; padding-bottom: 0.6rem; }
+  }
+
+  .tabs {
+    display: flex;
+    gap: clamp(1rem, 3vw, 2.75rem);
+    border-bottom: var(--rule);
+    margin-bottom: clamp(2rem, 4vw, 3rem);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs[hidden] { display: none; }
+  .tab {
+    flex: none;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    min-height: 44px;
+    padding: 0.85rem 0 1rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    background: none;
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--moss-deep);
+    transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
+  }
+  .tab-num { font-family: var(--font-serif); font-size: 1.05rem; letter-spacing: 0; color: var(--bronze-deep); }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--bronze); }
+  /* Phones: three equal columns, number above name, so no level is cut off at the edge. */
+  @media (max-width: 639px) {
+    .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; overflow: visible; }
+    .tab { flex-direction: column; align-items: flex-start; gap: 0.2rem; letter-spacing: 0.12em; font-size: 0.66rem; text-align: left; }
+    .tabs[hidden] { display: none; }
+  }
+
+  .panels { display: grid; gap: clamp(3.5rem, 7vw, 5rem); }
+  .panel { row-gap: 2rem; align-items: start; }
+  .panel[hidden] { display: none; }
+  .panel-photo { grid-column: 1 / -1; }
+  .panel-text { grid-column: 1 / -1; display: grid; gap: 1.1rem; align-content: start; }
+  @media (min-width: 1000px) {
+    .panel-photo { grid-column: 1 / span 8; }
+    .panel-text { grid-column: 9 / -1; }
+  }
+  .level-num { font-family: var(--font-serif); font-size: 3rem; line-height: 1; color: var(--bronze); }
+  .level-name { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-3); line-height: 1; color: var(--ink); }
+  .level-summary { color: var(--charcoal); max-width: 40ch; }
+
+  .plan { margin-top: 0.5rem; width: min(100%, 17rem); }
+  .plan :global(.plan-frame) { aspect-ratio: 1 / 1; background: var(--white); padding: 0.9rem; border: var(--rule); }
+  .plan :global(.plan-frame img) { object-fit: contain; }
+
+  .drawer { border-top: var(--rule); }
+  .drawer summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 44px;
+    padding-block: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .drawer summary::-webkit-details-marker { display: none; }
+  .drawer summary :global(svg) { width: 1rem; height: 1rem; flex: none; color: var(--bronze-deep); transition: transform 0.3s var(--ease); }
+  .drawer[open] summary :global(svg) { transform: rotate(180deg); }
+  .rooms { display: grid; gap: 0.45rem; padding-bottom: 1rem; font-size: var(--step--1); color: var(--charcoal); }
+  .rooms li { display: flex; gap: 0.75rem; }
+  .rooms li::before { content: ''; flex: 0 0 0.9rem; height: 1px; background: var(--bronze); transform: translateY(0.8em); }
+
+  .specs { margin-top: clamp(3rem, 6vw, 4.5rem); border-bottom: var(--rule); }
+  .spec-list {
+    display: grid;
+    gap: 0;
+    margin: 0 0 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    column-gap: 2rem;
+  }
+  .spec-list div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); }
+  .spec-list dt { font-size: var(--step--1); color: var(--moss-deep); }
+  .spec-list dd { margin: 0; font-size: var(--step--1); color: var(--ink); text-align: right; }
+  .plan-note { font-size: 0.8rem; color: var(--moss-deep); padding-bottom: 1.25rem; }
+</style>

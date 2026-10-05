@@ -1,0 +1,158 @@
+---
+import Photo from './Photo.astro';
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+
+// The house sits at ~44% / 79% of DJI_0705; object-position maps that point to the same spot in any crop.
+const HOUSE = { x: 44, y: 78.5 };
+const a = property.address;
+---
+
+<section class="section lifestyle" id="location" aria-labelledby="location-title">
+  <div class="container grid-12 head">
+    <div class="head-title">
+      <p class="eyebrow" data-reveal>{a.neighborhood} · {a.subdivision}</p>
+      <h2 class="display display--lg" id="location-title" data-reveal>Life at <em>Kaloli Point.</em></h2>
+    </div>
+    <p class="lede head-body" data-reveal>
+      A short walk from the ocean shoreline and the Shipman Beach trailhead, in a coastal neighborhood that is great for
+      walking, hiking and biking.
+    </p>
+  </div>
+
+  <figure class="map">
+    <div class="map-frame" style={`--hx:${HOUSE.x}%;--hy:${HOUSE.y}%`}>
+      <Photo
+        item={media.contextOcean}
+        focus={`${HOUSE.x}% ${HOUSE.y}%`}
+        sizes="(max-width: 767px) 222vw, (max-aspect-ratio: 16/9) calc(84vh * 1.7778), 100vw"
+        parallax
+      />
+      <div class="marker" aria-hidden="true">
+        <span class="marker-label">{a.streetDisplay}</span>
+        <span class="marker-line"></span>
+        <span class="marker-dot"></span>
+      </div>
+    </div>
+    <figcaption class="container caption">
+      {a.neighborhood} · {a.subdivision} · {a.district}, {a.island}. The Pacific on the horizon.
+    </figcaption>
+  </figure>
+
+  <div class="container grid-12 place">
+    <div class="place-panel">
+      <ul class="place-list" role="list">
+        <li><span class="k">The shoreline</span><span class="v">Black lava headlands, open Pacific surf, and honu resting on the rocks.</span></li>
+        <li><span class="k">The setting</span><span class="v">A sunbelt microclimate with paved roads and scenic coastal surroundings.</span></li>
+        <li><span class="k">From the house</span><span class="v">Sunrises, colorful sunsets, a peekaboo ocean view and the breeze through every lanai.</span></li>
+        <li><span class="k">After dark</span><span class="v">Star-filled skies above the house.</span></li>
+      </ul>
+    </div>
+    <Zoomable item={media.lookout} gallery="coast" class="coast-a" frameClass="ar-4x5" sizes="(min-width: 1000px) 30vw, 92vw" data-reveal-image />
+    <Zoomable item={media.honuLava} gallery="coast" class="coast-b" frameClass="ar-4x3" sizes="(min-width: 1000px) 40vw, 92vw" />
+  </div>
+
+  <div class="evening on-dark">
+    <div class="evening-media">
+      <Photo item={media.sunsetHouse} sizes="(max-width: 767px) 167vw, (max-aspect-ratio: 4/3) calc(90vh * 1.3333), 100vw" />
+    </div>
+    <div class="evening-shade" aria-hidden="true"></div>
+    <div class="container evening-copy on-photo">
+      <p class="eyebrow" data-reveal>Island evenings</p>
+      <p class="display display--lg" data-reveal>As the day ends, <em>the sky takes over.</em></p>
+      <div class="night">
+        <Photo item={media.nightSky} sizes="(min-width: 900px) 240px, 40vw" />
+        <p class="night-cap">The Milky Way above the house. Owner photograph.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .lifestyle { padding-bottom: 0; }
+  .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.25rem; }
+  .head-body { grid-column: 1 / -1; max-width: 30ch; }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 7; }
+    .head-body { grid-column: 8 / -1; padding-bottom: 0.75rem; }
+  }
+
+  .map-frame { position: relative; overflow: hidden; height: clamp(28rem, 84vh, 60rem); background: var(--stone); }
+  .map-frame :global(picture), .map-frame :global(img) { width: 100%; height: 100%; }
+  .map-frame :global(img) { object-fit: cover; }
+  @media (max-width: 767px) {
+    .map-frame { height: auto; aspect-ratio: 4 / 5; }
+  }
+  .marker {
+    position: absolute;
+    left: var(--hx);
+    top: var(--hy);
+    transform: translate(-50%, -100%);
+    display: grid;
+    justify-items: center;
+    pointer-events: none;
+    margin-top: -2.2%;
+  }
+  .marker-label {
+    padding: 0.5rem 0.85rem;
+    background: var(--ink);
+    color: var(--ivory);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .marker-line { width: 1px; height: clamp(1.75rem, 5vh, 3.5rem); background: var(--ink); }
+  .marker-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--bronze-light); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 70%, transparent); }
+
+  .place { margin-top: clamp(3.5rem, 7vw, 6rem); row-gap: 1.5rem; align-items: start; }
+  .place-panel {
+    grid-column: 1 / -1;
+    background: var(--forest);
+    color: var(--ivory);
+    padding: clamp(1.75rem, 3.5vw, 3rem);
+  }
+  .place-list { display: grid; gap: 1.4rem; }
+  .place-list li { display: grid; gap: 0.35rem; padding-top: 1.2rem; border-top: 1px solid color-mix(in srgb, var(--ivory) 18%, transparent); }
+  .place-list li:first-child { padding-top: 0; border-top: 0; }
+  .k { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: color-mix(in srgb, var(--bronze-light) 62%, var(--white)); }
+  .v { font-family: var(--font-serif); font-size: var(--step-1); line-height: 1.32; color: var(--ivory); }
+  .coast-a { grid-column: 1 / span 7; }
+  .coast-b { grid-column: 4 / -1; }
+  @media (min-width: 1000px) {
+    .place-panel { grid-column: 1 / span 5; grid-row: 1 / span 2; }
+    .coast-a { grid-column: 7 / span 3; grid-row: 1; }
+    .coast-b { grid-column: 10 / -1; grid-row: 1; align-self: end; }
+  }
+
+  .evening {
+    position: relative;
+    margin-top: clamp(4.5rem, 9vw, 8rem);
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    align-items: end;
+    overflow: hidden;
+    background: var(--ink);
+  }
+  .evening-media { position: absolute; inset: 0; }
+  .evening-media :global(picture), .evening-media :global(img) { width: 100%; height: 100%; }
+  .evening-media :global(img) { object-fit: cover; }
+  .evening-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 10, 0) 35%, rgba(10, 12, 10, 0.72) 85%, var(--ink) 100%); }
+  .evening-copy { position: relative; padding-block: 8rem clamp(3rem, 8vh, 5.5rem); display: grid; gap: 1.25rem; }
+  .evening-copy .display { max-width: 14ch; color: var(--white); }
+  .night { display: flex; align-items: end; gap: 1rem; margin-top: 1rem; }
+  .night :global(picture) { width: clamp(6.5rem, 14vw, 9.5rem); aspect-ratio: 896 / 1195; flex: none; }
+  .night :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .night-cap { max-width: 22ch; font-size: var(--step--1); color: var(--stone); }
+  @media (max-width: 767px) {
+    .evening { display: block; min-height: 0; }
+    .evening-media { position: relative; aspect-ratio: 4 / 5; }
+    .evening-shade { height: calc(100vw * 1.25); bottom: auto; background: linear-gradient(180deg, rgba(10, 12, 10, 0) 50%, var(--ink) 100%); }
+    .evening-copy { padding-top: 0; margin-top: -5rem; padding-bottom: 3rem; }
+  }
+</style>

@@ -8,7 +8,23 @@
   "preview_urls": false,
   "routes": [{ "pattern": "kalolipointparadisehawaii.com", "custom_domain": true }],
   // Pages (paths without a file extension) run the Worker first so each HTML response carries its own CSP nonce.
-  "assets": { "run_worker_first": ["/*", "!/*.*"] },
+  // /media/hero/* also runs first: the Worker answers byte-range requests there (Safari/iOS will not play MP4 without
+  // 206 responses, and static assets reply 200). Every other file type stays asset-first.
+  "assets": {
+    "run_worker_first": [
+      "/*",
+      "!/_astro/*",
+      "!/media/film/*",
+      "!/*.html",
+      "!/*.xml",
+      "!/*.txt",
+      "!/*.webmanifest",
+      "!/*.svg",
+      "!/*.png",
+      "!/*.jpg",
+      "!/*.ico"
+    ]
+  },
   "observability": { "enabled": true },
   // Retries listing-agent notifications that failed (lead stays safe in D1 meanwhile).
   "triggers": { "crons": ["*/10 * * * *"] },

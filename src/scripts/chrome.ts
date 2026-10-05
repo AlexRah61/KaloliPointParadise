@@ -1,5 +1,3 @@
-import { getLenis } from './scroll';
-
 // Header switches from transparent (over the hero photo) to solid once the hero is behind it.
 export function initHeader(): void {
   const header = document.querySelector<HTMLElement>('[data-header]');
@@ -11,7 +9,8 @@ export function initHeader(): void {
         if (header.querySelector('[aria-expanded="true"]')) return;
         header.dataset.state = entry?.isIntersecting ? 'over-hero' : 'solid';
       },
-      { rootMargin: `-${header.offsetHeight}px 0px 0px 0px`, threshold: 0 },
+      // 2px below the header edge, so a chapter landing flush under the header counts as "past the hero".
+      { rootMargin: `-${header.offsetHeight + 2}px 0px 0px 0px`, threshold: 0 },
     );
     io.observe(hero);
   } else {
@@ -27,9 +26,6 @@ export function initHeader(): void {
     header.dataset.menu = open ? 'open' : 'closed';
     nav.hidden = !open;
     document.documentElement.style.overflow = open ? 'hidden' : '';
-    const lenis = getLenis();
-    if (open) lenis?.stop();
-    else lenis?.start();
     if (open) nav.querySelector<HTMLAnchorElement>('a')?.focus();
     else if (restoreFocus) toggle.focus();
   };
@@ -46,15 +42,18 @@ export function initHeader(): void {
 }
 
 // One persistent "Request Private Showing" entry point:
-// - header CTA (tablet/desktop/landscape) steps back only while the form or closing CTA fills the screen;
-// - phone action bar appears once the hero CTA is gone and hides while the form is on screen, a field has focus,
-//   or the started film is on screen (its native controls sit along the bottom edge).
+// - header CTA (tablet/desktop/landscape) steps back only while the closing showing chapter fills the screen;
+// - phone action bar appears once the hero CTA is gone and hides while the showing chapter is on screen, a field
+//   has focus, a dialog is open, or the started film is on screen (its native controls sit along the bottom edge).
 export function initPersistentCta(): void {
   const header = document.querySelector<HTMLElement>('[data-header]');
   const bar = document.querySelector<HTMLElement>('[data-sticky-cta]');
-  const heroCta = document.querySelector<HTMLElement>('[data-hero-cta]');
+  // Track the hero button itself: on phones its wrapper also holds the stacked secondary link.
+  const heroCta =
+    document.querySelector<HTMLElement>('[data-hero-cta] [data-showing-cta]') ?? document.querySelector<HTMLElement>('[data-hero-cta]');
   const film = document.querySelector<HTMLElement>('[data-film]');
-  const zones = ['#showing', '#experience']
+  const dialogs = [...document.querySelectorAll<HTMLDialogElement>('dialog')];
+  const zones = ['#showing']
     .map((s) => document.querySelector<HTMLElement>(s))
     .filter((el): el is HTMLElement => !!el);
 
@@ -65,8 +64,9 @@ export function initPersistentCta(): void {
   const update = () => {
     const formOnScreen = [...share.values()].some((v) => v >= 0.35);
     const filmInUse = filmVisible && !!film && film.dataset.state !== 'idle';
+    const dialogOpen = dialogs.some((d) => d.open);
     if (header) header.dataset.cta = formOnScreen ? 'muted' : 'shown';
-    if (bar) bar.dataset.visible = String(!heroCtaVisible && !formOnScreen && !typing && !filmInUse);
+    if (bar) bar.dataset.visible = String(!heroCtaVisible && !formOnScreen && !typing && !filmInUse && !dialogOpen);
   };
 
   if (heroCta) {
@@ -98,6 +98,7 @@ export function initPersistentCta(): void {
     }).observe(film);
     new MutationObserver(update).observe(film, { attributes: true, attributeFilter: ['data-state'] });
   }
+  dialogs.forEach((d) => new MutationObserver(update).observe(d, { attributes: true, attributeFilter: ['open'] }));
 
   // The on-screen keyboard and the bar never compete for the same strip of screen.
   const isField = (t: EventTarget | null) => t instanceof HTMLElement && t.matches('input, select, textarea');

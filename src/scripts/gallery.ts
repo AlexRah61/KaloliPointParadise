@@ -1,5 +1,5 @@
 import { track } from './analytics';
-import { getLenis } from './scroll';
+import { prefersReducedMotion } from './scroll';
 
 interface Slide {
   src: string;
@@ -27,12 +27,13 @@ async function open(name: string, index: number, opener: HTMLElement | null): Pr
   const [{ default: PhotoSwipe }] = await Promise.all([import('photoswipe'), import('photoswipe/style.css')]);
   const { slides } = slidesFor(name);
   if (!slides.length) return;
-  const lenis = getLenis();
-  lenis?.stop();
+  // Inside a modal dialog (the full collection) the viewer must live in the dialog's top layer too.
+  const host = opener?.closest<HTMLDialogElement>('dialog[open]') ?? undefined;
 
   const pswp = new PhotoSwipe({
     dataSource: slides,
     index,
+    appendToEl: host,
     bgOpacity: 0.97,
     showHideAnimationType: 'fade',
     preload: [1, 2],
@@ -71,11 +72,44 @@ async function open(name: string, index: number, opener: HTMLElement | null): Pr
     root?.setAttribute('aria-label', 'Photo gallery');
   });
   pswp.on('destroy', () => {
-    lenis?.start();
     opener?.focus({ preventScroll: true });
   });
   pswp.init();
   track('gallery_open', { gallery_name: name });
+}
+
+// "View all 46 photographs": a full-screen dialog of every photograph, grouped by chapter.
+function initAllPhotos(): void {
+  const dialog = document.querySelector<HTMLDialogElement>('[data-all-photos]');
+  if (!dialog) return;
+  let opener: HTMLElement | null = null;
+  document.querySelectorAll<HTMLButtonElement>('[data-open-all]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      opener = btn;
+      document.documentElement.style.overflow = 'hidden';
+      dialog.showModal();
+      dialog.scrollTop = 0;
+      dialog.querySelector<HTMLElement>('#all-title')?.focus({ preventScroll: true });
+      track('gallery_open', { gallery_name: 'all' });
+    }),
+  );
+  dialog.querySelector('[data-all-close]')?.addEventListener('click', () => dialog.close());
+  // Escape belongs to the photo viewer while it is open; only then does it close the collection.
+  dialog.addEventListener('cancel', (e) => {
+    if (dialog.querySelector('.pswp')) e.preventDefault();
+  });
+  dialog.addEventListener('close', () => {
+    document.documentElement.style.overflow = '';
+    opener?.focus({ preventScroll: true });
+  });
+  dialog.querySelectorAll<HTMLAnchorElement>('.all-nav a').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      const target = dialog.querySelector<HTMLElement>(a.getAttribute('href') ?? '');
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    }),
+  );
 }
 
 export function initGallery(): void {
@@ -90,4 +124,5 @@ export function initGallery(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-open-gallery]').forEach((btn) =>
     btn.addEventListener('click', () => void open(btn.dataset.openGallery!, 0, btn)),
   );
+  initAllPhotos();
 }

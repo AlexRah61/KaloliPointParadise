@@ -1,5 +1,5 @@
 ---
-import { Check, ChevronDown, Phone, X } from '@lucide/astro';
+import { Check, ChevronDown, Mail, Phone, X } from '@lucide/astro';
 import { property } from '../data/property';
 
 const slots: { value: string; label: string }[] = [];
@@ -13,22 +13,29 @@ const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const a = property.agent;
 ---
 
-<section class="section showing" id="showing" aria-labelledby="showing-title">
+<section class="showing" id="showing" aria-labelledby="showing-title">
+  <div class="section band on-dark">
   <div class="container grid-12 showing-grid">
     <div class="aside">
-      <p class="eyebrow">{property.cta.primary}</p>
-      <h2 class="display display--lg" id="showing-title">Choose a time to visit.</h2>
-      <p class="body-copy intro">
-        Tell us when you'd like to see {property.address.streetDisplay}. It takes about thirty seconds.
+      <p class="eyebrow">Private showings</p>
+      <h2 class="display display--lg" id="showing-title">See it <em>in person.</em></h2>
+      <p class="intro">
+        Request a private showing of {property.address.streetDisplay}. It takes about thirty seconds.
       </p>
       <ol class="steps" role="list">
-        <li><span class="n">1</span><span>Pick a preferred day and time (Hawaiʻi time).</span></li>
-        <li><span class="n">2</span><span>{a.name} calls you to confirm, based on availability.</span></li>
-        <li><span class="n">3</span><span>Your showing is confirmed only once you have spoken with her.</span></li>
+        <li><span class="n">1</span><span>Choose a preferred day and time in Hawaiʻi Standard Time.</span></li>
+        <li><span class="n">2</span><span>The listing agent contacts you about availability.</span></li>
+        <li><span class="n">3</span><span>The showing is confirmed only after you and the agent speak.</span></li>
       </ol>
-      <a class="text-link call" href={a.phoneHref} data-track="agent_contact_click" data-track-location="form">
-        <Phone aria-hidden="true" /> Prefer to call? {a.phone}
-      </a>
+      <div class="agent" id="agent">
+        <p class="agent-role">Listing agent</p>
+        <p class="agent-name">{a.name}</p>
+        <p class="agent-meta">{a.title} · {a.brokerage} · License {a.license}</p>
+        <div class="agent-links">
+          <a class="text-link" href={a.phoneHref} data-track="agent_contact_click" data-track-location="agent"><Phone aria-hidden="true" /> {a.phone}</a>
+          <a class="text-link" href={`mailto:${a.email}?subject=${encodeURIComponent(`${property.address.streetDisplay} (MLS ${property.mls})`)}`} data-track="agent_contact_click" data-track-location="agent"><Mail aria-hidden="true" /> Email {a.firstName}</a>
+        </div>
+      </div>
     </div>
 
     <div class="form-wrap" data-form-home>
@@ -141,8 +148,9 @@ const a = property.agent;
       </form>
     </div>
   </div>
+  </div>
 
-  <dialog class="sheet" id="showing-sheet" aria-labelledby="sheet-title" aria-describedby="sheet-intro" data-showing-sheet data-lenis-prevent>
+  <dialog class="sheet" id="showing-sheet" aria-labelledby="sheet-title" aria-describedby="sheet-intro" data-showing-sheet>
     <div class="sheet-inner">
       <div class="sheet-head">
         <div>
@@ -177,25 +185,33 @@ const a = property.agent;
 </section>
 
 <style>
-  .showing { background: var(--ivory); scroll-margin-top: var(--header-h); }
+  .showing { scroll-margin-top: var(--header-h); }
+  .band { background: var(--ink); color: var(--stone); }
   .showing-grid { row-gap: 3rem; align-items: start; }
   .aside { grid-column: 1 / -1; display: grid; gap: 1.4rem; justify-items: start; }
-  .aside .display { max-width: 12ch; }
-  .intro { color: var(--charcoal); }
-  .steps { display: grid; gap: 0.9rem; margin-top: 0.5rem; }
+  .aside .display { max-width: 11ch; }
+  .intro { color: var(--stone); max-width: 36ch; }
+  .steps { display: grid; gap: 0.9rem; margin-top: 0.25rem; color: var(--ivory); }
   .steps li { display: grid; grid-template-columns: 2rem 1fr; gap: 0.75rem; align-items: baseline; }
   .n {
     width: 2rem; height: 2rem;
     display: grid; place-items: center;
-    border: 1px solid var(--bronze);
+    border: 1px solid var(--bronze-light);
     border-radius: 50%;
     font-family: var(--font-serif);
     font-size: 1.05rem;
-    color: var(--bronze-deep);
+    color: var(--bronze-light);
   }
-  .call { color: var(--forest); margin-top: 0.5rem; }
-  .call :global(svg) { width: 0.95rem; height: 0.95rem; }
+  .agent { margin-top: 1rem; padding-top: 1.5rem; border-top: 1px solid color-mix(in srgb, var(--ivory) 16%, transparent); display: grid; gap: 0.3rem; width: 100%; }
+  .agent-role { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--bronze-light); }
+  .agent-name { margin-top: 0.35rem; font-family: var(--font-serif); font-size: var(--step-2); line-height: 1.1; color: var(--ivory); }
+  .agent-meta { font-size: var(--step--1); color: var(--sand); }
+  .agent-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; margin-top: 0.75rem; }
+  .agent-links .text-link { color: var(--ivory); }
+  .agent-links :global(svg) { width: 0.95rem; height: 0.95rem; }
   .form-wrap { grid-column: 1 / -1; }
+  /* The form panel is light even on the dark chapter, so focus rings switch back to the dark bronze. */
+  .form :focus-visible { outline-color: var(--bronze-deep); }
   @media (min-width: 1000px) {
     .aside { grid-column: 1 / span 4; position: sticky; top: calc(var(--header-h) + 2.5rem); }
     .form-wrap { grid-column: 6 / -1; }

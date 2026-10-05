@@ -1,6 +1,5 @@
 import { track } from './analytics';
 import { getAttribution } from './attribution';
-import { getLenis } from './scroll';
 import { addDays, hstToday, isIsoDate, isLikelyBot, MAX_DAYS_AHEAD, phoneDigits, TOUR_LABEL, TURNSTILE_ACTION } from '../lib/showing-shared';
 
 declare global {
@@ -80,6 +79,8 @@ export function initShowingForm(): void {
     widgetId = window.turnstile.render(tsHost, {
       sitekey: siteKey,
       appearance: 'interaction-only',
+      // A challenge widget is 300 px wide; narrow phones get the 150 px compact one so it never widens the page.
+      size: window.matchMedia('(max-width: 389px)').matches ? 'compact' : 'normal',
       theme: 'light',
       action: TURNSTILE_ACTION,
       callback: (t: string) => {
@@ -138,7 +139,6 @@ export function initShowingForm(): void {
 
   let sheetActive = false;
   let lockY = 0;
-  let lockedOverflow = false;
   const vv = window.visualViewport;
   const syncViewport = () => {
     if (sheet && vv) sheet.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
@@ -169,15 +169,9 @@ export function initShowingForm(): void {
     if (finePointer.matches) window.addEventListener('scroll', holdScroll, { passive: true });
     sheet.showModal();
     sheet.scrollTop = 0;
-    if (finePointer.matches) form.querySelector<HTMLInputElement>('#sr-name')?.focus({ preventScroll: true });
-    else sheet.querySelector<HTMLElement>('#sheet-title')?.focus({ preventScroll: true });
+    sheet.querySelector<HTMLElement>('#sheet-title')?.focus({ preventScroll: true });
     settleScroll();
-    const lenis = getLenis();
-    if (lenis) lenis.stop();
-    else {
-      document.documentElement.style.overflow = 'hidden';
-      lockedOverflow = true;
-    }
+    document.documentElement.style.overflow = 'hidden';
   }
 
   function restoreForm(returnFocus: boolean): void {
@@ -192,12 +186,9 @@ export function initShowingForm(): void {
       opener = null;
     }
     settleScroll();
-    // Lenis may have finished loading while the sheet was open, so undo whichever lock was applied.
-    if (lockedOverflow) {
-      document.documentElement.style.overflow = '';
-      lockedOverflow = false;
-    }
-    getLenis()?.start();
+    // The sheet can open over the full photograph collection; keep the page locked until that closes too.
+    const otherOpen = [...document.querySelectorAll('dialog[open]')].some((d) => d !== sheet && d !== dialog);
+    document.documentElement.style.overflow = otherOpen ? 'hidden' : '';
   }
 
   if (sheet) {

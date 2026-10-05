@@ -32,6 +32,8 @@ export const CTA_ORIGINS = [
   'mobile_sticky',
   'menu',
   'property_details',
+  'lanais',
+  'grounds',
   'gallery',
   'film',
   'final_cta',

@@ -1,0 +1,102 @@
+---
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+
+const f = property.facts;
+const facts = [
+  { label: 'Bedrooms', value: String(f.beds) },
+  { label: 'Bathrooms', value: String(f.baths) },
+  { label: 'Living area', value: `${f.sqft.toLocaleString('en-US')} sq ft` },
+  { label: 'Lot', value: `${f.acres.toFixed(2)} acre` },
+  { label: 'Levels', value: String(f.levels) },
+  { label: 'Lanais', value: String(f.lanais) },
+  { label: 'Renovated', value: String(f.renovated) },
+];
+---
+
+<section class="section proposition" id="residence" aria-labelledby="residence-title">
+  <div class="container grid-12 prop-grid">
+    <div class="prop-text">
+      <h2 class="eyebrow" id="residence-title" data-reveal>The residence</h2>
+      <p class="statement" data-reveal>
+        A distinctive <em>octagonal</em> home on three levels, with three lanais, set in a private tropical half acre at
+        {property.address.neighborhood} — and extensively renovated in {f.renovated}.
+      </p>
+      <dl class="facts-line" data-reveal>
+        {facts.map((it) => (
+          <div class="fact">
+            <dt>{it.label}</dt>
+            <dd>{it.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+    <Zoomable
+      item={media.architectureAerial}
+      gallery="residence"
+      class="prop-figure"
+      frameClass="ar-4x5"
+      sizes="(min-width: 1000px) 38vw, 92vw"
+      data-reveal-image
+    />
+  </div>
+</section>
+
+<style>
+  .proposition { padding-bottom: clamp(3rem, 6vw, 5rem); }
+  .prop-grid { row-gap: clamp(2.5rem, 5vw, 3.5rem); align-items: end; }
+  .prop-text { grid-column: 1 / -1; }
+  .prop-figure { grid-column: 1 / -1; }
+  @media (min-width: 1000px) {
+    .prop-text { grid-column: 1 / span 7; padding-bottom: 0.25rem; }
+    .prop-figure { grid-column: 9 / -1; }
+  }
+  .statement {
+    margin-top: clamp(1.5rem, 3vw, 2.25rem);
+    max-width: 22ch;
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 1.3rem + 2.9vw, 4rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .statement em { font-style: italic; }
+
+  /* Facts on a hairline grid (the 1px gaps are the rules): 7 across, 4 + 3 on tablets, pairs on phones. */
+  .facts-line {
+    --hair: color-mix(in srgb, var(--ink) 16%, transparent);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin: clamp(2.25rem, 4.5vw, 3.5rem) 0 0;
+    background: var(--hair);
+    border-block: 1px solid var(--hair);
+  }
+  .fact { display: flex; flex-direction: column-reverse; gap: 0.35rem; padding: 1rem 1.1rem; background: var(--ivory); }
+  .fact:nth-child(4n + 1) { padding-left: 0; }
+  .fact:last-child { grid-column: span 2; }
+  dd {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--step-2);
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: lining-nums;
+    white-space: nowrap;
+  }
+  dt {
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--moss-deep);
+  }
+  @media (max-width: 639px) {
+    .facts-line { grid-template-columns: 1fr 1fr; }
+    .fact:nth-child(4n + 1) { padding-left: 1.1rem; }
+    .fact:nth-child(odd) { padding-left: 0; }
+  }
+</style>

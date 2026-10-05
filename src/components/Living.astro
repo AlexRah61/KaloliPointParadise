@@ -1,0 +1,229 @@
+---
+import { ChevronDown } from '@lucide/astro';
+import Zoomable from './Zoomable.astro';
+import Photo from './Photo.astro';
+import ShowingButton from './ShowingButton.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+import { SIZES } from '../lib/sizes';
+const r = property.renovation;
+---
+
+<section class="section living" id="lanais" aria-labelledby="lanais-title">
+  <!-- 1 · Indoor-outdoor living -->
+  <div class="container grid-12 head">
+    <div class="head-title">
+      <p class="eyebrow" data-reveal>Indoor · outdoor</p>
+      <h2 class="display display--lg" id="lanais-title" data-reveal>Three lanais. <em>Live outside.</em></h2>
+    </div>
+    <p class="lede head-sub" data-reveal>Three spacious lanais extend the home's living experience into the tropical surroundings.</p>
+  </div>
+
+  <Zoomable
+    item={media.lanaiFurnished}
+    gallery="lanais"
+    class="bleed"
+    frameClass="bleed-frame"
+    sizes={SIZES.bleed3x2}
+    parallax
+    data-reveal-image
+  />
+
+  <div class="container grid-12 lanai-pair">
+    <div class="lanai-copy">
+      <p class="display display--sm">
+        The upper wraparound lanai is made for morning coffee, yoga and entertaining — with gentle breezes and the garden below.
+      </p>
+      <ShowingButton origin="lanais" class="text-link soft" label="Experience the lanais in person" />
+    </div>
+    <Zoomable item={media.lanaiRockers} gallery="lanais" class="lanai-detail" frameClass="ar-4x5" sizes={SIZES.fourCols} focus="42% 50%" />
+  </div>
+
+  <!-- 2 · Renovated kitchen and primary suite -->
+  <div class="container grid-12 interiors" id="interiors">
+    <div class="interiors-head">
+      <p class="eyebrow" data-reveal>Renovated in {r.year}</p>
+      <h3 class="display display--md" data-reveal>A kitchen and primary suite, made new.</h3>
+    </div>
+    <Zoomable item={media.kitchenWide} gallery="interiors" class="kitchen" frameClass="ar-3x2" sizes={SIZES.eightCols} data-reveal-image />
+    <div class="interiors-copy body-copy">
+      <p>
+        The kitchen gathers around a waterfall-edge quartz island, with new cabinets, countertops and appliances, and
+        French doors to the wraparound lanai.
+      </p>
+      <p>On the top floor, the primary bath has a freestanding tub and a double vanity.</p>
+    </div>
+    <Zoomable item={media.primaryBath} gallery="interiors" class="bath" frameClass="ar-3x2" sizes={SIZES.fiveCols} />
+  </div>
+
+  <div class="container reno">
+    <ul class="reno-groups" role="list" aria-label={`${r.year} renovation`}>
+      {r.groups.map((g) => (
+        <li>
+          <h4 class="reno-title">{g.title}</h4>
+          <p class="reno-summary">{g.summary}</p>
+        </li>
+      ))}
+    </ul>
+    <details class="drawer">
+      <summary>View complete renovation details <ChevronDown aria-hidden="true" /></summary>
+      <div class="reno-full">
+        {r.groups.map((g) => (
+          <div>
+            <p class="reno-title">{g.title}</p>
+            <ul role="list">
+              {g.items.map((it) => <li>{it}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </details>
+  </div>
+
+  <!-- 3 · The private tropical half acre -->
+  <div class="grounds on-dark" id="grounds">
+    <div class="grounds-media">
+      <Photo item={media.groundsLawn} sizes="(max-width: 767px) 188vw, (max-aspect-ratio: 3/2) calc(100vh * 1.5), 100vw" parallax />
+    </div>
+    <div class="grounds-shade" aria-hidden="true"></div>
+    <div class="container grounds-copy on-photo">
+      <p class="eyebrow" data-reveal>The half acre</p>
+      <h3 class="display display--xl" data-reveal>A private tropical half acre.</h3>
+      <p class="lede" data-reveal>
+        Mature palms, ornamentals and established fruit trees screen the grounds, enclosed by more than
+        {property.facts.rockWallFeet} feet of rock wall and fencing.
+      </p>
+    </div>
+  </div>
+
+  <div class="container harvest">
+    <p class="harvest-note">
+      Photographed on the property in September 2026 — coconuts, lilikoʻi, papaya and raised beds already planted with greens.
+    </p>
+    <ul class="harvest-grid" role="list">
+      {[media.coconuts, media.lilikoi, media.papaya, media.raisedBeds].map((item) => (
+        <li>
+          <Zoomable item={item} gallery="harvest" frameClass="ar-4x5" sizes="(min-width: 1000px) 22vw, 46vw" />
+        </li>
+      ))}
+    </ul>
+    <ShowingButton origin="grounds" class="text-link soft" label="Walk the grounds in person" />
+  </div>
+</section>
+
+<style>
+  .living { padding-bottom: clamp(4rem, 8vw, 7rem); }
+  .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.25rem; }
+  .head-sub { grid-column: 1 / -1; max-width: 26ch; }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 7; }
+    .head-sub { grid-column: 8 / -1; padding-bottom: 0.75rem; }
+  }
+
+  .bleed :global(.bleed-frame) { height: clamp(26rem, 80vh, 56rem); }
+  .bleed :global(.caption) { width: min(100% - 2 * var(--gutter), var(--maxw)); margin-inline: auto; }
+  @media (max-width: 767px) {
+    .bleed :global(.bleed-frame) { height: auto; aspect-ratio: 4 / 3; }
+  }
+
+  .lanai-pair { margin-top: clamp(3rem, 6vw, 5rem); row-gap: 2.5rem; align-items: end; }
+  .lanai-copy { grid-column: 1 / -1; display: grid; gap: 1.75rem; justify-items: start; }
+  .lanai-copy .display--sm { max-width: 26ch; }
+  .lanai-detail { grid-column: 4 / -1; }
+  @media (min-width: 1000px) {
+    .lanai-copy { grid-column: 1 / span 6; padding-bottom: 3rem; }
+    .lanai-detail { grid-column: 8 / -1; }
+  }
+
+  .soft { color: var(--forest); }
+  .soft :global(svg) { width: 0.95rem; height: 0.95rem; }
+
+  .interiors { margin-top: clamp(6rem, 12vw, 10rem); row-gap: clamp(2rem, 4vw, 3rem); align-items: start; scroll-margin-top: var(--header-h); }
+  .interiors-head { grid-column: 1 / -1; }
+  .interiors-head .display { margin-top: 1.25rem; max-width: 18ch; }
+  .kitchen { grid-column: 1 / -1; }
+  .interiors-copy { grid-column: 1 / -1; }
+  .bath { grid-column: 3 / -1; }
+  @media (min-width: 1000px) {
+    .kitchen { grid-column: 1 / span 8; grid-row: 2 / span 2; }
+    .interiors-copy { grid-column: 9 / -1; grid-row: 2; padding-top: 1rem; }
+    .bath { grid-column: 9 / -1; grid-row: 3; align-self: end; }
+  }
+
+  .reno { margin-top: clamp(3rem, 6vw, 5rem); }
+  .reno-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 1.75rem clamp(1.5rem, 3vw, 2.5rem);
+    padding-bottom: 1.75rem;
+  }
+  .reno-groups li { border-top: 1px solid color-mix(in srgb, var(--ink) 22%, transparent); padding-top: 1.1rem; }
+  .reno-title { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--bronze-deep); }
+  .reno-summary { margin-top: 0.6rem; font-family: var(--font-serif); font-size: var(--step-1); line-height: 1.3; color: var(--ink); }
+  .drawer { border-top: var(--rule); border-bottom: var(--rule); }
+  .drawer summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 44px;
+    padding-block: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .drawer summary::-webkit-details-marker { display: none; }
+  .drawer summary :global(svg) { width: 1rem; height: 1rem; flex: none; color: var(--bronze-deep); transition: transform 0.3s var(--ease); }
+  .drawer[open] summary :global(svg) { transform: rotate(180deg); }
+  .reno-full {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 1.5rem clamp(1.5rem, 3vw, 2.5rem);
+    padding: 0.5rem 0 1.5rem;
+  }
+  .reno-full ul { margin-top: 0.6rem; display: grid; gap: 0.4rem; font-size: var(--step--1); color: var(--charcoal); }
+
+  .grounds {
+    position: relative;
+    margin-top: clamp(6rem, 12vw, 10rem);
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    align-items: end;
+    overflow: hidden;
+    background: var(--ink);
+    scroll-margin-top: var(--header-h);
+  }
+  .grounds-media { position: absolute; inset: 0; }
+  .grounds-media :global(picture), .grounds-media :global(img) { width: 100%; height: 100%; }
+  .grounds-media :global(img) { object-fit: cover; }
+  .grounds-shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10, 12, 10, 0.08) 0%, rgba(10, 12, 10, 0) 40%, rgba(10, 12, 10, 0.8) 100%),
+      linear-gradient(90deg, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0.12) 40%, rgba(10, 12, 10, 0) 60%);
+  }
+  .grounds-copy { position: relative; padding-block: 8rem clamp(3rem, 8vh, 6rem); }
+  .grounds-copy .display { margin-top: 1.25rem; max-width: 13ch; color: var(--white); }
+  .grounds-copy .lede { margin-top: 1.5rem; max-width: 34ch; color: var(--ivory); }
+  @media (max-width: 767px) {
+    .grounds { display: block; min-height: 0; }
+    .grounds-media { position: relative; inset: auto; aspect-ratio: 4 / 5; }
+    .grounds-shade { height: calc(100vw * 1.25); bottom: auto; background: linear-gradient(180deg, rgba(10, 12, 10, 0) 45%, var(--ink) 100%); }
+    .grounds-copy { padding-top: 0; margin-top: -6rem; padding-bottom: 2.5rem; }
+  }
+
+  .harvest { margin-top: clamp(2.5rem, 5vw, 4rem); display: grid; gap: 1.5rem; justify-items: start; }
+  .harvest-note { max-width: 62ch; color: var(--moss-deep); font-size: var(--step--1); }
+  .harvest-grid { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(0.6rem, 1.4vw, 1.25rem); }
+  @media (min-width: 1000px) {
+    .harvest-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+</style>

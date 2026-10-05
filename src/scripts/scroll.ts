@@ -1,20 +1,15 @@
-import type Lenis from 'lenis';
-
 export const prefersReducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let lenis: Lenis | null = null;
-export const setLenis = (l: Lenis | null): void => {
-  lenis = l;
+// Chapters land flush under the fixed header in its scrolled (solid) state; their own top padding provides
+// the breathing room.
+const headerOffset = (): number => {
+  const solid = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h-solid'));
+  return Number.isFinite(solid) && solid > 0 ? solid : (document.querySelector<HTMLElement>('[data-header]')?.offsetHeight ?? 0);
 };
-export const getLenis = (): Lenis | null => lenis;
-
-const headerOffset = (): number => (document.querySelector<HTMLElement>('[data-header]')?.offsetHeight ?? 0) + 8;
 
 export function scrollToTarget(target: HTMLElement, focus = true): void {
   const top = target.getBoundingClientRect().top + window.scrollY - headerOffset();
-  // A numeric target: given an element, Lenis adds the page's scroll-padding-top on top of our offset.
-  if (lenis) lenis.scrollTo(top, { duration: 1.4 });
-  else window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   if (focus) {
     const heading = target.matches('h1, h2, h3') ? target : target.querySelector<HTMLElement>('h2, h3');
     const el = heading ?? target;
@@ -28,7 +23,7 @@ export function initAnchors(): void {
   document.addEventListener('click', (e) => {
     const a = (e.target as Element | null)?.closest<HTMLAnchorElement>('a[href*="#"]');
     if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-    if (a.hasAttribute('data-gallery') || a.hasAttribute('data-film-trigger')) return;
+    if (a.hasAttribute('data-gallery') || a.hasAttribute('data-film-trigger') || a.closest('dialog')) return;
     // Showing CTAs open the request sheet instead (handled in form.ts) wherever the sheet exists.
     if (a.hasAttribute('data-showing-cta') && document.querySelector('[data-showing-sheet]')) return;
     const url = new URL(a.href, location.href);

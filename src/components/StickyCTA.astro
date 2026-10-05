@@ -1,15 +1,10 @@
 ---
-// Portrait-phone action bar. Larger screens carry the same CTA in the header instead.
-import { Phone } from '@lucide/astro';
+// Portrait-phone action bar: one action. Larger screens carry the same CTA in the header instead.
 import ShowingButton from './ShowingButton.astro';
-import { property } from '../data/property';
 ---
 
 <div class="sticky-cta" data-sticky-cta data-visible="false">
   <ShowingButton origin="mobile_sticky" class="btn btn--light sticky-main" arrow={false} />
-  <a class="sticky-call" href={property.agent.phoneHref} data-track="agent_contact_click" data-track-location="sticky" aria-label={`Call the listing agent, ${property.agent.phone}`}>
-    <Phone aria-hidden="true" />
-  </a>
 </div>
 
 <style>
@@ -37,21 +32,10 @@ import { property } from '../data/property';
       transition: transform 0.3s var(--ease), visibility 0s linear 0s;
     }
     .sticky-cta :global(.sticky-main) { flex: 1; min-width: 0; min-height: 3rem; padding-inline: 1rem; }
-    .sticky-call {
-      flex: none;
-      width: 3rem;
-      min-height: 3rem;
-      display: grid;
-      place-items: center;
-      color: var(--ivory);
-      border: 1px solid color-mix(in srgb, var(--ivory) 32%, transparent);
-    }
-    .sticky-call :global(svg) { width: 1.15rem; height: 1.15rem; }
   }
-  /* 320-359 px phones: the full label and the call button still fit on one line. */
+  /* 320-359 px phones: the full label still fits on one line. */
   @media (max-width: 359px) and (min-height: 501px) {
     .sticky-cta { padding-inline: max(0.75rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-right)); }
-    .sticky-cta :global(.sticky-main) { padding-inline: 0.6rem; font-size: 0.72rem; letter-spacing: 0.1em; }
-    .sticky-call { width: 2.75rem; }
+    .sticky-cta :global(.sticky-main) { padding-inline: 0.6rem; letter-spacing: 0.12em; }
   }
 </style>

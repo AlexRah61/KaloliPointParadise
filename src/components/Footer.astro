@@ -1,7 +1,6 @@
 ---
 import { property } from '../data/property';
 import Octagon from './Octagon.astro';
-import ShowingButton from './ShowingButton.astro';
 const year = new Date().getFullYear();
 const a = property.agent;
 ---
@@ -33,8 +32,7 @@ const a = property.agent;
       </div>
 
       <div class="col col-cta">
-        <ShowingButton origin="footer" class="btn btn--light" arrow={false} />
-        <a class="text-link" href="/privacy/">Privacy</a>
+        <a class="text-link" href="/privacy/">Privacy notice</a>
       </div>
     </div>
 

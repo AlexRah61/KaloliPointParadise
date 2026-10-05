@@ -1,46 +1,61 @@
 ---
-import { Play } from '@lucide/astro';
+import { ArrowRight, Pause, Play } from '@lucide/astro';
 import Photo from './Photo.astro';
 import ShowingButton from './ShowingButton.astro';
 import { media } from '../data/media';
 import { property } from '../data/property';
 
 // Rendered width of a 16:9 frame cover-filling the hero, so retina screens pick the full 2048px file.
-const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+const sizes = '(max-width: 767px) and (min-height: 501px) calc(60vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+const c = property.campaign;
 ---
 
 <section class="hero on-dark" id="top" data-hero aria-labelledby="hero-title">
   <div class="hero-media">
     <div class="hero-pan" data-parallax-hero>
       <Photo item={media.heroAerial} sizes={sizes} priority class="hero-pic" />
+      <video
+        class="hero-video"
+        muted
+        loop
+        playsinline
+        autoplay
+        preload="none"
+        disablepictureinpicture
+        aria-hidden="true"
+        tabindex="-1"
+        data-hero-video
+        data-src-wide={property.video.heroWide}
+        data-src-tall={property.video.heroTall}
+      ></video>
     </div>
     <div class="hero-shade" aria-hidden="true"></div>
+    <button class="hero-toggle" type="button" aria-pressed="false" aria-label="Pause background video" hidden data-hero-toggle>
+      <Pause aria-hidden="true" class="i-pause" />
+      <Play aria-hidden="true" class="i-play" />
+    </button>
   </div>
 
   <div class="hero-content">
-    <p class="eyebrow reveal-1">For sale · {property.address.neighborhood}</p>
+    <p class="eyebrow reveal-1">For sale · {property.address.subdivision}</p>
     <h1 class="hero-title" id="hero-title">
-      <span class="line"><span>{property.address.lineOne}</span></span>
-      <span class="line"><span>{property.address.lineTwo}</span></span>
+      <span class="line"><span>{c.title}</span></span>
+      <span class="tagline reveal-2">{c.tagline}</span>
     </h1>
-    <p class="hero-place reveal-2">{property.address.cityDisplay}, {property.address.stateDisplay}</p>
+    <p class="hero-address reveal-2">{c.addressLine}</p>
     <div class="hero-meta reveal-3">
-      <p class="price"><span class="visually-hidden">Offered at </span>{property.priceDisplay}</p>
+      <p class="price"><span class="offered">Offered at</span> {property.priceDisplay}</p>
       <p class="facts">{property.factsLine}</p>
     </div>
     <div class="hero-actions reveal-4" data-hero-cta>
-      <ShowingButton origin="hero" class="btn btn--light" />
-      <a class="btn btn--ghost-light" href="#film" data-film-trigger>
-        <Play aria-hidden="true" class="play-icon" />
-        <span>{property.cta.film}</span>
-      </a>
+      <ShowingButton origin="hero" class="btn btn--light" arrow={false} />
+      <a class="text-link explore" href="#residence">{property.cta.explore} <ArrowRight aria-hidden="true" /></a>
     </div>
+    <a class="film-link reveal-4" href="#film" data-film-trigger>
+      <span class="film-ring" aria-hidden="true"><Play /></span>
+      <span>{property.cta.film} <span class="film-time">· {property.video.durationLabel}</span></span>
+    </a>
   </div>
-
-  <a class="scroll-cue" href="#facts">
-    <span class="visually-hidden">Scroll to property facts</span>
-    <span class="cue-line" aria-hidden="true"></span>
-  </a>
 </section>
 
 <style>
@@ -60,13 +75,47 @@ const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 
     object-fit: cover;
     animation: hero-settle 2.8s var(--ease) both;
   }
+  /* The loop dissolves in over the photograph once its first frame is on screen; until then (or if it never
+     plays) the photograph is the hero. */
+  .hero-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1.6s var(--ease);
+    pointer-events: none;
+  }
+  .hero[data-video='playing'] .hero-video { opacity: 1; }
   .hero-shade {
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(10, 12, 10, 0.42) 0%, rgba(10, 12, 10, 0) 24%, rgba(10, 12, 10, 0) 44%, rgba(10, 12, 10, 0.82) 100%),
-      linear-gradient(90deg, rgba(10, 12, 10, 0.62) 0%, rgba(10, 12, 10, 0.2) 34%, rgba(10, 12, 10, 0) 52%);
+      linear-gradient(180deg, rgba(10, 12, 10, 0.45) 0%, rgba(10, 12, 10, 0) 22%, rgba(10, 12, 10, 0) 40%, rgba(10, 12, 10, 0.86) 100%),
+      linear-gradient(90deg, rgba(10, 12, 10, 0.66) 0%, rgba(10, 12, 10, 0.22) 36%, rgba(10, 12, 10, 0) 56%);
   }
+
+  .hero-toggle {
+    position: absolute;
+    z-index: 3;
+    right: var(--gutter);
+    top: calc(var(--header-h) + 1rem);
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ivory) 45%, transparent);
+    background: color-mix(in srgb, var(--ink) 35%, transparent);
+    color: var(--ivory);
+    opacity: 0.8;
+    transition: opacity 0.3s var(--ease), background-color 0.3s var(--ease);
+  }
+  .hero-toggle:hover { opacity: 1; background: color-mix(in srgb, var(--ink) 60%, transparent); }
+  .hero-toggle[hidden] { display: none; }
+  .hero-toggle :global(svg) { width: 0.95rem; height: 0.95rem; }
+  .hero-toggle :global(.i-play), .hero-toggle[aria-pressed='true'] :global(.i-pause) { display: none; }
+  .hero-toggle[aria-pressed='true'] :global(.i-play) { display: block; }
 
   .hero-content {
     position: relative;
@@ -80,42 +129,61 @@ const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 
   .eyebrow { color: var(--ivory); text-shadow: 0 1px 14px rgba(10, 12, 10, 0.55); }
   .eyebrow::before { background: var(--bronze-light); opacity: 1; }
   .hero-title {
-    margin-top: 1.35rem;
+    margin-top: 1.25rem;
     font-family: var(--font-serif);
     font-weight: 400;
-    /* Kept narrower than the photo's left third so the house stays unobstructed. */
-    font-size: clamp(3.4rem, 1.2rem + 6.2vw, 8.4rem);
-    line-height: 0.9;
-    letter-spacing: -0.015em;
-    text-transform: uppercase;
     color: var(--white);
     text-shadow: 0 2px 30px rgba(10, 12, 10, 0.35);
   }
   .line { display: block; overflow: hidden; padding-bottom: 0.04em; }
-  .line > span { display: inline-block; animation: hero-rise 1.25s var(--ease) both; }
-  .line:nth-child(2) > span { animation-delay: 0.12s; }
-  .hero-place {
-    margin-top: 1rem;
-    font-family: var(--font-serif);
+  .line > span {
+    display: inline-block;
+    font-size: clamp(3.6rem, 1.4rem + 6.4vw, 8.8rem);
+    line-height: 0.9;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    animation: hero-rise 1.25s var(--ease) both;
+  }
+  .tagline {
+    display: block;
+    margin-top: 0.85rem;
     font-style: italic;
     font-size: var(--step-2);
+    line-height: 1.2;
     color: var(--stone);
+  }
+  .hero-address {
+    margin-top: 1rem;
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ivory);
   }
   .hero-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.5rem 1.75rem;
-    margin-top: clamp(1.5rem, 3vh, 2.25rem);
+    margin-top: clamp(1.4rem, 3vh, 2rem);
     padding-top: clamp(1.1rem, 2.4vh, 1.5rem);
     border-top: 1px solid color-mix(in srgb, var(--ivory) 30%, transparent);
-    max-width: 44rem;
   }
   .price {
     font-family: var(--font-serif);
     font-size: var(--step-3);
     line-height: 1;
     color: var(--white);
+  }
+  .offered {
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--stone);
+    vertical-align: 0.6em;
+    margin-right: 0.35rem;
   }
   .facts {
     font-size: 0.78rem;
@@ -127,63 +195,90 @@ const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.85rem;
-    margin-top: clamp(1.6rem, 3.4vh, 2.5rem);
+    align-items: center;
+    gap: 0.85rem 2rem;
+    margin-top: clamp(1.5rem, 3.2vh, 2.25rem);
   }
-  .hero-actions :global(.play-icon) { width: 0.9rem; height: 0.9rem; fill: currentColor; }
+  .explore { color: var(--ivory); }
+  .explore :global(svg) { width: 0.95rem; height: 0.95rem; }
+
+  .film-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-top: 1.25rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ivory);
+  }
+  .film-ring {
+    width: 2.9rem;
+    height: 2.9rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ivory) 60%, transparent);
+    border-radius: 50%;
+    transition: background-color 0.35s var(--ease), color 0.35s var(--ease);
+  }
+  .film-ring :global(svg) { width: 0.9rem; height: 0.9rem; fill: currentColor; margin-left: 2px; }
+  .film-link:hover .film-ring { background: var(--ivory); color: var(--ink); }
+  .film-time { color: var(--stone); }
 
   .reveal-1, .reveal-2, .reveal-3, .reveal-4 { animation: hero-fade 1.1s var(--ease) both; }
   .reveal-1 { animation-delay: 0.05s; }
-  .reveal-2 { animation-delay: 0.35s; }
-  .reveal-3 { animation-delay: 0.5s; }
-  .reveal-4 { animation-delay: 0.65s; }
-
-  .scroll-cue {
-    position: absolute;
-    z-index: 2;
-    right: var(--gutter);
-    bottom: clamp(3.25rem, 9vh, 6.5rem);
-    width: 44px;
-    height: 72px;
-    display: none;
-    place-items: center;
-  }
-  .cue-line {
-    width: 1px;
-    height: 100%;
-    background: linear-gradient(var(--ivory), transparent);
-    animation: cue 2.4s var(--ease) infinite;
-    transform-origin: top;
-  }
+  .reveal-2 { animation-delay: 0.3s; }
+  .reveal-3 { animation-delay: 0.45s; }
+  .reveal-4 { animation-delay: 0.6s; }
 
   @media (min-width: 768px) {
-    .scroll-cue { display: grid; }
-    .hero-content > * { max-width: min(36rem, 40vw); }
-    .hero-meta { max-width: min(36rem, 40vw); }
+    /* The film sits apart from the two actions, at the far edge of the type block. */
+    .film-link { position: absolute; right: 0; bottom: clamp(3.25rem, 9vh, 6.5rem); margin-top: 0; max-width: none !important; }
+    .hero-content > * { max-width: min(38rem, 46vw); }
   }
 
-  /* Phones: keep the photograph near native resolution by giving it the top of the screen
-     and setting the type on ink below, instead of cropping 16:9 to full portrait height. */
-  @media (max-width: 767px) {
-    /* Short screens (Safari toolbars) shrink the photo so the price and primary CTA stay above the fold. */
-    .hero { grid-template-rows: 64vh auto; grid-template-rows: min(64svh, calc(100svh - 19.5rem)) auto; }
-    .hero-media { position: relative; inset: auto; height: 64vh; height: min(64svh, calc(100svh - 19.5rem)); }
+  /* Phones in portrait: the moving image keeps the top of the screen at near-native resolution and the type
+     sits on ink below it, instead of a 16:9 frame cropped to full portrait height. Landscape phones keep the
+     full-bleed composition. */
+  @media (max-width: 767px) and (min-height: 501px) {
+    /* Short screens (Safari toolbars, 320 x 568) shrink the media so the price and primary CTA stay above the fold. */
+    .hero { grid-template-rows: 60vh auto; grid-template-rows: min(60svh, calc(100svh - 23rem)) auto; }
+    .hero-media { position: relative; inset: auto; height: 60vh; height: min(60svh, calc(100svh - 23rem)); }
     .hero-shade {
       background: linear-gradient(180deg, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0) 26%, rgba(10, 12, 10, 0) 58%, var(--ink) 100%);
     }
-    .hero-content { padding-top: 0; margin-top: -5.5rem; padding-bottom: 2.5rem; }
-    .hero-title { margin-top: 1rem; }
-    .hero-actions { flex-direction: column; align-items: stretch; }
-    .hero-actions .btn { width: 100%; }
-    .facts { letter-spacing: 0.14em; font-size: 0.72rem; }
+    .hero-toggle { top: calc(var(--header-h) + 0.75rem); }
+    .hero-content { padding-top: 0; margin-top: -4.5rem; padding-bottom: 2.25rem; }
+    .hero-title { margin-top: 0.9rem; }
+    .line > span { font-size: clamp(2.9rem, 1.6rem + 6.6vw, 4.2rem); }
+    .tagline { font-size: 1.3rem; margin-top: 0.6rem; }
+    .hero-address { font-size: 0.66rem; letter-spacing: 0.16em; margin-top: 0.8rem; }
+    .hero-meta { gap: 0.4rem 1.25rem; }
+    .facts { letter-spacing: 0.14em; font-size: 0.7rem; }
+    .hero-actions { flex-direction: column; align-items: stretch; gap: 1rem; }
+    .hero-actions :global(.btn) { width: 100%; }
+    .explore { align-self: flex-start; }
   }
 
-  @keyframes hero-settle { from { transform: scale(1.07); } to { transform: scale(1); } }
+  /* Short landscape screens: the same composition, with tighter type so the price and actions stay near the fold. */
+  @media (max-height: 500px) {
+    .hero-content { padding-top: calc(var(--header-h) + 1.25rem); padding-bottom: 1.75rem; }
+    .hero-title { margin-top: 0.75rem; }
+    .line > span { font-size: clamp(2.6rem, 9vh, 3.6rem); }
+    .tagline { font-size: 1.15rem; margin-top: 0.4rem; }
+    .hero-address { margin-top: 0.6rem; }
+    .hero-meta { margin-top: 0.9rem; padding-top: 0.75rem; }
+    .price { font-size: var(--step-2); }
+    .hero-actions { margin-top: 1rem; }
+    .film-link { margin-top: 0.75rem; }
+  }
+  @media (min-width: 768px) and (max-height: 500px) {
+    .film-link { bottom: 1.75rem; margin-top: 0; }
+  }
+
+  @keyframes hero-settle { from { transform: scale(1.06); } to { transform: scale(1); } }
   @keyframes hero-rise { from { transform: translateY(105%); } to { transform: translateY(0); } }
   @keyframes hero-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  @keyframes cue {
-    0% { transform: scaleY(0); opacity: 0; }
-    30% { transform: scaleY(1); opacity: 1; }
-    100% { transform: scaleY(1); opacity: 0; }
-  }
 </style>
