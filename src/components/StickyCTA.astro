@@ -36,7 +36,7 @@ import { property } from '../data/property';
       visibility: visible;
       transition: transform 0.3s var(--ease), visibility 0s linear 0s;
     }
-    .sticky-cta :global(.sticky-main) { flex: 1; min-height: 3rem; padding-inline: 1rem; }
+    .sticky-cta :global(.sticky-main) { flex: 1; min-width: 0; min-height: 3rem; padding-inline: 1rem; }
     .sticky-call {
       flex: none;
       width: 3rem;
@@ -47,5 +47,11 @@ import { property } from '../data/property';
       border: 1px solid color-mix(in srgb, var(--ivory) 32%, transparent);
     }
     .sticky-call :global(svg) { width: 1.15rem; height: 1.15rem; }
+  }
+  /* 320-359 px phones: the full label and the call button still fit on one line. */
+  @media (max-width: 359px) and (min-height: 501px) {
+    .sticky-cta { padding-inline: max(0.75rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-right)); }
+    .sticky-cta :global(.sticky-main) { padding-inline: 0.6rem; font-size: 0.72rem; letter-spacing: 0.1em; }
+    .sticky-call { width: 2.75rem; }
   }
 </style>

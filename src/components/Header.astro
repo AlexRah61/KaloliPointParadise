@@ -200,7 +200,14 @@ const links = [
   }
   .num { font-family: var(--font-sans); font-size: 0.7rem; letter-spacing: 0.2em; color: var(--bronze-light); }
   .nav-mobile-foot { display: grid; gap: 1.25rem; justify-items: start; margin-top: 2.5rem; }
-  .site-header:has(.menu-toggle[aria-expanded='true']) { color: var(--ivory); background: var(--ink); }
+  /* No backdrop-filter while the menu is open: WebKit makes a filtered header the containing block of the fixed menu. */
+  .site-header[data-menu='open'] {
+    color: var(--ivory);
+    background: var(--ink);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .site-header[data-menu='open'] .actions :global(.header-cta) { --btn-bg: var(--bronze-light); --btn-fg: var(--ink); --btn-border: var(--bronze-light); }
 
   @media (max-width: 699px) {
     .brand-sub { display: none; }

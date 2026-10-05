@@ -11,12 +11,10 @@ export const getLenis = (): Lenis | null => lenis;
 const headerOffset = (): number => (document.querySelector<HTMLElement>('[data-header]')?.offsetHeight ?? 0) + 8;
 
 export function scrollToTarget(target: HTMLElement, focus = true): void {
-  if (lenis) {
-    lenis.scrollTo(target, { offset: -headerOffset(), duration: 1.4 });
-  } else {
-    const top = target.getBoundingClientRect().top + window.scrollY - headerOffset();
-    window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-  }
+  const top = target.getBoundingClientRect().top + window.scrollY - headerOffset();
+  // A numeric target: given an element, Lenis adds the page's scroll-padding-top on top of our offset.
+  if (lenis) lenis.scrollTo(top, { duration: 1.4 });
+  else window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   if (focus) {
     const heading = target.matches('h1, h2, h3') ? target : target.querySelector<HTMLElement>('h2, h3');
     const el = heading ?? target;

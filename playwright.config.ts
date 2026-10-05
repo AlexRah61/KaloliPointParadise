@@ -32,6 +32,11 @@ export default defineConfig({
     { name: 'phone-landscape', use: { ...devices['iPhone 14 landscape'], browserName: 'chromium', viewport: { width: 844, height: 390 } } },
     { name: 'tablet-portrait', use: { ...devices['iPad Pro 11'], browserName: 'chromium', viewport: { width: 820, height: 1180 } } },
     { name: 'webkit-desktop', use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
+    { name: 'iphone-webkit', use: { ...devices['iPhone 14'] } },
+    { name: 'android-chromium', use: { ...devices['Pixel 7'] } },
+    // Smallest supported phone (320 CSS px, the WCAG reflow width) in both orientations: @phone checks only.
+    { name: 'iphone-se', use: { ...devices['iPhone SE'] }, grep: /@phone/ },
+    { name: 'iphone-se-landscape', use: { ...devices['iPhone SE landscape'] }, grep: /@phone/ },
   ],
   // Local runs always use a test-mode build (Cloudflare testing keys); BASE_URL targets a deployed environment.
   webServer: process.env.BASE_URL

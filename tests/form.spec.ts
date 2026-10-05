@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
-import { test, expect, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 type KpWindow = Window & { __kpEvents?: { event: string; params: Record<string, unknown> }[] };
 
@@ -40,6 +41,7 @@ async function fillValid(page: Page, email: string) {
 
 test.describe('showing form', () => {
   test.beforeEach(({}, info) => {
+    test.skip(!!process.env.BASE_URL, 'never submit leads to a deployed site from automated tests (it sends real email)');
     test.skip(!['desktop-1440', 'mobile-390', 'webkit-desktop'].includes(info.project.name), 'form flow runs on representative projects');
   });
 

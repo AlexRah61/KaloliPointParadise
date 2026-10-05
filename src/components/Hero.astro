@@ -165,8 +165,9 @@ const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 
   /* Phones: keep the photograph near native resolution by giving it the top of the screen
      and setting the type on ink below, instead of cropping 16:9 to full portrait height. */
   @media (max-width: 767px) {
-    .hero { grid-template-rows: 64vh auto; grid-template-rows: 64svh auto; }
-    .hero-media { position: relative; inset: auto; height: 64vh; height: 64svh; }
+    /* Short screens (Safari toolbars) shrink the photo so the price and primary CTA stay above the fold. */
+    .hero { grid-template-rows: 64vh auto; grid-template-rows: min(64svh, calc(100svh - 19.5rem)) auto; }
+    .hero-media { position: relative; inset: auto; height: 64vh; height: min(64svh, calc(100svh - 19.5rem)); }
     .hero-shade {
       background: linear-gradient(180deg, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0) 26%, rgba(10, 12, 10, 0) 58%, var(--ink) 100%);
     }

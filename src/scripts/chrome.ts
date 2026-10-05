@@ -24,6 +24,7 @@ export function initHeader(): void {
 
   const setOpen = (open: boolean, restoreFocus = true) => {
     toggle.setAttribute('aria-expanded', String(open));
+    header.dataset.menu = open ? 'open' : 'closed';
     nav.hidden = !open;
     document.documentElement.style.overflow = open ? 'hidden' : '';
     const lenis = getLenis();
@@ -46,29 +47,39 @@ export function initHeader(): void {
 
 // One persistent "Request Private Showing" entry point:
 // - header CTA (tablet/desktop/landscape) steps back only while the form or closing CTA fills the screen;
-// - phone action bar appears once the hero CTA is gone and hides while the form is on screen or a field has focus.
+// - phone action bar appears once the hero CTA is gone and hides while the form is on screen, a field has focus,
+//   or the started film is on screen (its native controls sit along the bottom edge).
 export function initPersistentCta(): void {
   const header = document.querySelector<HTMLElement>('[data-header]');
   const bar = document.querySelector<HTMLElement>('[data-sticky-cta]');
   const heroCta = document.querySelector<HTMLElement>('[data-hero-cta]');
+  const film = document.querySelector<HTMLElement>('[data-film]');
   const zones = ['#showing', '#experience']
     .map((s) => document.querySelector<HTMLElement>(s))
     .filter((el): el is HTMLElement => !!el);
 
   let heroCtaVisible = !!heroCta;
   let typing = false;
+  let filmVisible = false;
   const share = new Map<Element, number>();
   const update = () => {
     const formOnScreen = [...share.values()].some((v) => v >= 0.35);
+    const filmInUse = filmVisible && !!film && film.dataset.state !== 'idle';
     if (header) header.dataset.cta = formOnScreen ? 'muted' : 'shown';
-    if (bar) bar.dataset.visible = String(!heroCtaVisible && !formOnScreen && !typing);
+    if (bar) bar.dataset.visible = String(!heroCtaVisible && !formOnScreen && !typing && !filmInUse);
   };
 
   if (heroCta) {
-    new IntersectionObserver(([e]) => {
-      heroCtaVisible = !!e?.isIntersecting;
-      update();
-    }).observe(heroCta);
+    const headerH = header?.offsetHeight ?? 0;
+    // The hero CTA holds the bar back until its centre has scrolled up under the fixed header.
+    new IntersectionObserver(
+      ([e]) => {
+        if (!e) return;
+        heroCtaVisible = e.boundingClientRect.top + e.boundingClientRect.height / 2 > headerH;
+        update();
+      },
+      { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: [0, 0.25, 0.5, 0.75, 1] },
+    ).observe(heroCta);
   }
   if (zones.length) {
     const io = new IntersectionObserver(
@@ -79,6 +90,13 @@ export function initPersistentCta(): void {
       { threshold: Array.from({ length: 101 }, (_, i) => i / 100) },
     );
     zones.forEach((z) => io.observe(z));
+  }
+  if (film) {
+    new IntersectionObserver(([e]) => {
+      filmVisible = !!e?.isIntersecting;
+      update();
+    }).observe(film);
+    new MutationObserver(update).observe(film, { attributes: true, attributeFilter: ['data-state'] });
   }
 
   // The on-screen keyboard and the bar never compete for the same strip of screen.

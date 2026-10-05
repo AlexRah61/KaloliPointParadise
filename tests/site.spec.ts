@@ -1,5 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from './fixtures';
 
 type KpWindow = Window & { __kpEvents?: { event: string; params: Record<string, string> }[] };
 const events = (page: Page) => page.evaluate(() => ((window as KpWindow).__kpEvents ?? []).map((e) => e.event));
@@ -7,7 +8,7 @@ const tracked = (page: Page, name: string) =>
   page.evaluate((n) => ((window as KpWindow).__kpEvents ?? []).filter((e) => e.event === n).map((e) => e.params), name);
 
 test.describe('page', () => {
-  test('loads cleanly with complete SEO metadata', async ({ page }) => {
+  test('loads cleanly with complete SEO metadata', { tag: '@phone' }, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -28,7 +29,35 @@ test.describe('page', () => {
     expect(await events(page)).toContain('property_view');
   });
 
-  test('hero shows price, facts and both calls to action', async ({ page }) => {
+  test('loads with healthy Core Web Vitals (LCP, CLS) and page weight', async ({ page, browserName }, info) => {
+    test.skip(browserName !== 'chromium', 'LCP and layout-shift observers are Chromium-only');
+    await page.addInitScript(() => {
+      const w = window as unknown as { __cls: number; __lcp: number };
+      w.__cls = 0;
+      w.__lcp = 0;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) w.__cls += e.value;
+      }).observe({ type: 'layout-shift', buffered: true });
+      new PerformanceObserver((list) => {
+        const all = list.getEntries();
+        w.__lcp = all[all.length - 1]?.startTime ?? w.__lcp;
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
+    });
+    await page.goto('/');
+    await page.waitForLoadState('load');
+    await page.waitForTimeout(2500);
+    const m = await page.evaluate(() => {
+      const w = window as unknown as { __cls: number; __lcp: number };
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const kb = (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).reduce((s, r) => s + r.transferSize, nav.transferSize) / 1024;
+      return { lcp: Math.round(w.__lcp), cls: Number(w.__cls.toFixed(3)), ttfb: Math.round(nav.responseStart), kb: Math.round(kb) };
+    });
+    console.log(`[${info.project.name}] LCP ${m.lcp} ms | CLS ${m.cls} | TTFB ${m.ttfb} ms | initial transfer ${m.kb} KB`);
+    expect(m.cls).toBeLessThan(0.1);
+    expect(m.lcp).toBeLessThan(4000);
+  });
+
+  test('hero shows price, facts and both calls to action', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const hero = page.locator('[data-hero]');
     await expect(hero).toContainText('$679,000');
@@ -61,7 +90,7 @@ test.describe('page', () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(y0);
   });
 
-  test('Request Private Showing stays reachable from top to footer and back', async ({ page }) => {
+  test('Request Private Showing stays reachable from top to footer and back', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(700);
     const probe = () =>
@@ -95,7 +124,8 @@ test.describe('page', () => {
     expect(top.ctas, 'no duplicate phone bar over the hero').not.toContain('mobile_sticky');
 
     const max = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
-    const step = Math.round(page.viewportSize()!.height * 0.8);
+    // Every 0.8 screen, but no more than ~45 stops so short landscape screens finish within the timeout.
+    const step = Math.max(Math.round(page.viewportSize()!.height * 0.8), Math.ceil(max / 45));
     const stops: number[] = [];
     for (let y = 0; y < max; y += step) stops.push(y);
     stops.push(max, Math.round(max * 0.66), Math.round(max * 0.33), 0);
@@ -129,7 +159,84 @@ test.describe('page', () => {
     expect(await events(page)).toContain('showing_cta_click');
   });
 
-  test('navigation reaches every chapter', async ({ page, isMobile }) => {
+  test('no content is cut off at the sides', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(800);
+    const cut = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth;
+      const insideScroller = (el: Element) => {
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+          if (['hidden', 'auto', 'scroll', 'clip'].includes(getComputedStyle(p).overflowX)) return true;
+        }
+        return false;
+      };
+      return [...document.querySelectorAll('h1, h2, h3, p, li, dt, dd, a, button, label, input, select, textarea')]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0 || el.closest('dialog:not([open]), [hidden], .visually-hidden, .skip-link')) return false;
+          return (r.right > vw + 1 || r.left < -1) && !insideScroller(el);
+        })
+        .map((el) => `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 32)}" spans ${Math.round(el.getBoundingClientRect().left)}..${Math.round(el.getBoundingClientRect().right)} of ${vw}`);
+    });
+    expect(cut).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+
+  test('the phone action bar never covers controls, fields or the last lines', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const bar = page.locator('[data-sticky-cta]');
+    test.skip(await bar.evaluate((el) => getComputedStyle(el).display === 'none'), 'the action bar exists only on portrait phones');
+    const shown = () => bar.evaluate((el) => (el as HTMLElement).dataset.visible === 'true');
+    // What a tap on the bar's centre would actually hit.
+    const atBar = () =>
+      page.evaluate(() => {
+        const r = document.querySelector('[data-sticky-cta]')!.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (el?.closest('[data-sticky-cta]')) return 'bar';
+        if (el?.closest('.pswp')) return 'gallery';
+        if (el?.closest('#mobile-nav')) return 'menu';
+        return el?.tagName.toLowerCase() ?? 'none';
+      });
+
+    await page.evaluate(() => window.scrollTo(0, document.getElementById('gallery')!.offsetTop));
+    await expect.poll(shown).toBe(true);
+
+    await page.locator('a[data-gallery="collection"]').first().click();
+    await expect(page.locator('.pswp')).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(await atBar(), 'gallery viewer and its controls sit above the bar').toBe('gallery');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.pswp')).toHaveCount(0);
+
+    await page.locator('[data-menu-toggle]').click();
+    await expect(page.locator('#mobile-nav')).toBeVisible();
+    expect(await atBar(), 'the open menu covers the bar').toBe('menu');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#mobile-nav')).toBeHidden();
+
+    await page.locator('#film').scrollIntoViewIfNeeded();
+    await page.locator('[data-film-play]').click();
+    await expect(page.locator('[data-film]')).not.toHaveAttribute('data-state', 'idle', { timeout: 20000 });
+    await expect.poll(shown, { message: 'the bar steps aside while the film player is in use' }).toBe(false);
+    await page.locator('[data-film-video]').evaluate((v: HTMLVideoElement) => v.pause());
+
+    await page.evaluate(() => window.scrollTo(0, document.getElementById('lanais')!.offsetTop));
+    await expect.poll(shown).toBe(true);
+    await page.locator('#f-name').focus();
+    await expect.poll(shown, { message: 'typing in the form hides the bar' }).toBe(false);
+    await page.locator('#f-name').blur();
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(700);
+    const last = await page.evaluate(() => {
+      const line = document.querySelector('.site-footer .copy')!.getBoundingClientRect();
+      const b = document.querySelector<HTMLElement>('[data-sticky-cta]')!;
+      return { lineBottom: line.bottom, barTop: b.getBoundingClientRect().top, barShown: b.dataset.visible === 'true' };
+    });
+    if (last.barShown) expect(last.lineBottom, 'the last footer line clears the bar').toBeLessThanOrEqual(last.barTop);
+  });
+
+  test('navigation reaches every chapter', { tag: '@phone' }, async ({ page, isMobile }) => {
     await page.goto('/');
     const header = page.locator('[data-header]');
     for (const [label, id] of [['Lanais', 'lanais'], ['Gallery', 'gallery'], ['Kaloli Point', 'location']] as const) {
@@ -153,7 +260,7 @@ test.describe('page', () => {
     }
   });
 
-  test('gallery opens full screen, navigates by keyboard and closes', async ({ page }) => {
+  test('gallery opens full screen, navigates by keyboard and closes', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const tile = page.locator('a[data-gallery="collection"]').first();
     const total = await page.locator('a[data-gallery="collection"]').count();
@@ -181,7 +288,7 @@ test.describe('page', () => {
     await expect(plan).toHaveAttribute('data-pswp-caption', /with dimensions/);
   });
 
-  test('property film streams and is tracked', async ({ page, browserName }) => {
+  test('property film streams and is tracked', { tag: '@phone' }, async ({ page, browserName }) => {
     await page.goto('/');
     await page.locator('#film').scrollIntoViewIfNeeded();
     await page.locator('[data-film-play]').click();
@@ -206,15 +313,14 @@ test.describe('page', () => {
     expect(bad).toEqual([]);
   });
 
-  test('reduced motion leaves all content visible', async ({ browser }) => {
-    const ctx = await browser.newContext({ reducedMotion: 'reduce' });
-    const page = await ctx.newPage();
+  test('reduced motion leaves all content visible', async ({ page }) => {
+    // Same context as every other test, so runs against a deployed site keep analytics quiet.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await page.waitForTimeout(1200);
     const hidden = await page.evaluate(() => [...document.querySelectorAll('[data-reveal]')].filter((e) => getComputedStyle(e).opacity !== '1').length);
     expect(hidden).toBe(0);
     expect(await page.evaluate(() => document.documentElement.classList.contains('lenis'))).toBe(false);
-    await ctx.close();
   });
 
   test('phone links dial the listing agent and are tracked', async ({ page }) => {

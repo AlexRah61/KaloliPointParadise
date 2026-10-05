@@ -3,7 +3,12 @@
   "name": "kaloli-point-residence",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-10-01",
-  "workers_dev": true,
+  // Served only on the canonical apex; www is redirected by workers/www-redirect.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "kalolipointparadisehawaii.com", "custom_domain": true }],
+  // Pages (paths without a file extension) run the Worker first so each HTML response carries its own CSP nonce.
+  "assets": { "run_worker_first": ["/*", "!/*.*"] },
   "observability": { "enabled": true },
   // Retries listing-agent notifications that failed (lead stays safe in D1 meanwhile).
   "triggers": { "crons": ["*/10 * * * *"] },
@@ -11,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "kaloli-leads",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "c9a6b4a5-d813-40a8-86ec-8016295539a3",
       "migrations_dir": "migrations"
     }
   ],
