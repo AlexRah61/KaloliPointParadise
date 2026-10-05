@@ -1,0 +1,39 @@
+---
+import type { MediaItem } from '../data/media';
+import { responsive } from '../lib/images';
+
+interface Props {
+  item: MediaItem;
+  /** Must describe the rendered width honestly so high-DPR screens get the full-resolution file. */
+  sizes: string;
+  priority?: boolean;
+  class?: string;
+  imgClass?: string;
+  focus?: string;
+  alt?: string;
+  maxWidth?: number;
+  parallax?: boolean;
+}
+
+const { item, sizes, priority = false, class: cls, imgClass, focus, alt, maxWidth, parallax = false } = Astro.props;
+const set = await responsive(item, maxWidth);
+const position = focus ?? item.focus ?? '50% 50%';
+---
+
+<picture class={cls}>
+  <source type="image/avif" srcset={set.avif} sizes={sizes} />
+  <source type="image/webp" srcset={set.webp} sizes={sizes} />
+  <img
+    src={set.fallback}
+    width={set.width}
+    height={set.height}
+    alt={alt ?? item.alt}
+    sizes={sizes}
+    loading={priority ? 'eager' : 'lazy'}
+    decoding={priority ? 'sync' : 'async'}
+    fetchpriority={priority ? 'high' : 'auto'}
+    class={imgClass}
+    style={`object-position:${position}`}
+    data-parallax={parallax ? '' : undefined}
+  />
+</picture>

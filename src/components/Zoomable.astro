@@ -1,0 +1,43 @@
+---
+import type { MediaItem } from '../data/media';
+import { lightbox } from '../lib/images';
+import Photo from './Photo.astro';
+
+interface Props {
+  item: MediaItem;
+  sizes: string;
+  gallery: string;
+  class?: string;
+  frameClass?: string;
+  priority?: boolean;
+  focus?: string;
+  caption?: string | false;
+  maxWidth?: number;
+  parallax?: boolean;
+  /** Lightbox image when it differs from the thumbnail (e.g. dimensioned floor plan). */
+  zoomItem?: MediaItem;
+  [key: `data-${string}`]: string | boolean | undefined;
+}
+
+const { item, sizes, gallery, class: cls, frameClass = '', priority, focus, caption, maxWidth, parallax, zoomItem, ...rest } = Astro.props;
+const target = zoomItem ?? item;
+const lb = await lightbox(target);
+const label = caption === false ? undefined : (caption ?? item.caption);
+---
+
+<figure class={cls} {...rest}>
+  <a
+    class:list={['zoomable frame', frameClass]}
+    href={lb.href}
+    data-pswp-src={lb.href}
+    data-pswp-srcset={lb.srcset}
+    data-pswp-width={lb.width}
+    data-pswp-height={lb.height}
+    data-pswp-caption={target.caption ?? target.alt}
+    data-gallery={gallery}
+    aria-label={`Open image: ${target.alt}`}
+  >
+    <Photo item={item} sizes={sizes} priority={priority} focus={focus} maxWidth={maxWidth} parallax={parallax} />
+  </a>
+  {label && <figcaption class="caption">{label}</figcaption>}
+</figure>

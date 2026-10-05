@@ -1,0 +1,188 @@
+---
+import { Play } from '@lucide/astro';
+import Photo from './Photo.astro';
+import ShowingButton from './ShowingButton.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+
+// Rendered width of a 16:9 frame cover-filling the hero, so retina screens pick the full 2048px file.
+const sizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+---
+
+<section class="hero on-dark" id="top" data-hero aria-labelledby="hero-title">
+  <div class="hero-media">
+    <div class="hero-pan" data-parallax-hero>
+      <Photo item={media.heroAerial} sizes={sizes} priority class="hero-pic" />
+    </div>
+    <div class="hero-shade" aria-hidden="true"></div>
+  </div>
+
+  <div class="hero-content">
+    <p class="eyebrow reveal-1">For sale · {property.address.neighborhood}</p>
+    <h1 class="hero-title" id="hero-title">
+      <span class="line"><span>{property.address.lineOne}</span></span>
+      <span class="line"><span>{property.address.lineTwo}</span></span>
+    </h1>
+    <p class="hero-place reveal-2">{property.address.cityDisplay}, {property.address.stateDisplay}</p>
+    <div class="hero-meta reveal-3">
+      <p class="price"><span class="visually-hidden">Offered at </span>{property.priceDisplay}</p>
+      <p class="facts">{property.factsLine}</p>
+    </div>
+    <div class="hero-actions reveal-4" data-hero-cta>
+      <ShowingButton origin="hero" class="btn btn--light" />
+      <a class="btn btn--ghost-light" href="#film" data-film-trigger>
+        <Play aria-hidden="true" class="play-icon" />
+        <span>{property.cta.film}</span>
+      </a>
+    </div>
+  </div>
+
+  <a class="scroll-cue" href="#facts">
+    <span class="visually-hidden">Scroll to property facts</span>
+    <span class="cue-line" aria-hidden="true"></span>
+  </a>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100svh;
+    background: var(--ink);
+    color: var(--ivory);
+    display: grid;
+    overflow: hidden;
+  }
+  .hero-media { position: absolute; inset: 0; overflow: hidden; }
+  .hero-pan { position: absolute; inset: 0; will-change: transform; }
+  .hero-pan :global(picture), .hero-pan :global(img) { width: 100%; height: 100%; }
+  .hero-pan :global(img) {
+    object-fit: cover;
+    animation: hero-settle 2.8s var(--ease) both;
+  }
+  .hero-shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10, 12, 10, 0.42) 0%, rgba(10, 12, 10, 0) 24%, rgba(10, 12, 10, 0) 44%, rgba(10, 12, 10, 0.82) 100%),
+      linear-gradient(90deg, rgba(10, 12, 10, 0.62) 0%, rgba(10, 12, 10, 0.2) 34%, rgba(10, 12, 10, 0) 52%);
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    align-self: end;
+    width: min(100% - 2 * var(--gutter), var(--maxw));
+    margin-inline: auto;
+    padding-bottom: clamp(3.25rem, 9vh, 6.5rem);
+    padding-top: calc(var(--header-h) + 2rem);
+  }
+  .eyebrow { color: var(--ivory); text-shadow: 0 1px 14px rgba(10, 12, 10, 0.55); }
+  .eyebrow::before { background: var(--bronze-light); opacity: 1; }
+  .hero-title {
+    margin-top: 1.35rem;
+    font-family: var(--font-serif);
+    font-weight: 400;
+    /* Kept narrower than the photo's left third so the house stays unobstructed. */
+    font-size: clamp(3.4rem, 1.2rem + 6.2vw, 8.4rem);
+    line-height: 0.9;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
+    color: var(--white);
+    text-shadow: 0 2px 30px rgba(10, 12, 10, 0.35);
+  }
+  .line { display: block; overflow: hidden; padding-bottom: 0.04em; }
+  .line > span { display: inline-block; animation: hero-rise 1.25s var(--ease) both; }
+  .line:nth-child(2) > span { animation-delay: 0.12s; }
+  .hero-place {
+    margin-top: 1rem;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--step-2);
+    color: var(--stone);
+  }
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1.75rem;
+    margin-top: clamp(1.5rem, 3vh, 2.25rem);
+    padding-top: clamp(1.1rem, 2.4vh, 1.5rem);
+    border-top: 1px solid color-mix(in srgb, var(--ivory) 30%, transparent);
+    max-width: 44rem;
+  }
+  .price {
+    font-family: var(--font-serif);
+    font-size: var(--step-3);
+    line-height: 1;
+    color: var(--white);
+  }
+  .facts {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--stone);
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: clamp(1.6rem, 3.4vh, 2.5rem);
+  }
+  .hero-actions :global(.play-icon) { width: 0.9rem; height: 0.9rem; fill: currentColor; }
+
+  .reveal-1, .reveal-2, .reveal-3, .reveal-4 { animation: hero-fade 1.1s var(--ease) both; }
+  .reveal-1 { animation-delay: 0.05s; }
+  .reveal-2 { animation-delay: 0.35s; }
+  .reveal-3 { animation-delay: 0.5s; }
+  .reveal-4 { animation-delay: 0.65s; }
+
+  .scroll-cue {
+    position: absolute;
+    z-index: 2;
+    right: var(--gutter);
+    bottom: clamp(3.25rem, 9vh, 6.5rem);
+    width: 44px;
+    height: 72px;
+    display: none;
+    place-items: center;
+  }
+  .cue-line {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(var(--ivory), transparent);
+    animation: cue 2.4s var(--ease) infinite;
+    transform-origin: top;
+  }
+
+  @media (min-width: 768px) {
+    .scroll-cue { display: grid; }
+    .hero-content > * { max-width: min(36rem, 40vw); }
+    .hero-meta { max-width: min(36rem, 40vw); }
+  }
+
+  /* Phones: keep the photograph near native resolution by giving it the top of the screen
+     and setting the type on ink below, instead of cropping 16:9 to full portrait height. */
+  @media (max-width: 767px) {
+    .hero { grid-template-rows: 64vh auto; grid-template-rows: 64svh auto; }
+    .hero-media { position: relative; inset: auto; height: 64vh; height: 64svh; }
+    .hero-shade {
+      background: linear-gradient(180deg, rgba(10, 12, 10, 0.5) 0%, rgba(10, 12, 10, 0) 26%, rgba(10, 12, 10, 0) 58%, var(--ink) 100%);
+    }
+    .hero-content { padding-top: 0; margin-top: -5.5rem; padding-bottom: 2.5rem; }
+    .hero-title { margin-top: 1rem; }
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .hero-actions .btn { width: 100%; }
+    .facts { letter-spacing: 0.14em; font-size: 0.72rem; }
+  }
+
+  @keyframes hero-settle { from { transform: scale(1.07); } to { transform: scale(1); } }
+  @keyframes hero-rise { from { transform: translateY(105%); } to { transform: translateY(0); } }
+  @keyframes hero-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes cue {
+    0% { transform: scaleY(0); opacity: 0; }
+    30% { transform: scaleY(1); opacity: 1; }
+    100% { transform: scaleY(1); opacity: 0; }
+  }
+</style>

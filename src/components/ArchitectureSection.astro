@@ -1,0 +1,147 @@
+---
+import { ArrowRight } from '@lucide/astro';
+import Zoomable from './Zoomable.astro';
+import { media, floorPlans } from '../data/media';
+import { property } from '../data/property';
+
+const planFor = {
+  'level-1': { plan: floorPlans.level1, dim: floorPlans.level1Dim },
+  'level-2': { plan: floorPlans.level2, dim: floorPlans.level2Dim },
+  'level-3': { plan: floorPlans.level3, dim: floorPlans.level3Dim },
+} as const;
+---
+
+<section class="section section--ink architecture on-dark" id="architecture" aria-labelledby="architecture-title">
+  <div class="container">
+    <div class="grid-12 head">
+      <div class="head-title">
+        <p class="eyebrow" data-reveal>Tri-level living</p>
+        <h2 class="display display--lg" id="architecture-title" data-reveal>A home with a <em>different</em> rhythm.</h2>
+      </div>
+      <div class="head-body body-copy" data-reveal>
+        <p>
+          Three stacked levels on an octagonal footprint give the house a vertical, unhurried character — more varied, and
+          more flexible, than a conventional two-bedroom home.
+        </p>
+        <p>Each floor has its own mood, and every one of them opens to the outdoors.</p>
+      </div>
+    </div>
+
+    <Zoomable
+      item={media.architectureAerial}
+      gallery="architecture"
+      class="hero-figure"
+      frameClass="ar-16x9 arch-frame"
+      sizes="(max-width: 767px) 188vw, (min-width: 1520px) 1440px, 92vw"
+      data-reveal-image
+    />
+
+    <ol class="levels" role="list" aria-label="The three levels">
+      {property.levels.map((lvl) => {
+        const p = planFor[lvl.id as keyof typeof planFor];
+        return (
+          <li class="level" data-reveal>
+            <div class="level-head">
+              <span class="level-num">{lvl.number}</span>
+              <h3 class="level-name">{lvl.name}</h3>
+            </div>
+            <Zoomable
+              item={p.plan}
+              zoomItem={p.dim}
+              gallery="plans"
+              class="plan"
+              frameClass="plan-frame"
+              sizes="(min-width: 1000px) 30vw, 92vw"
+              caption={false}
+            />
+            <p class="level-summary">{lvl.summary}</p>
+            <ul class="rooms" role="list">
+              {lvl.rooms.map((r) => <li>{r}</li>)}
+            </ul>
+          </li>
+        );
+      })}
+    </ol>
+
+    <div class="grid-12 stair-row">
+      <Zoomable
+        item={media.stairLight}
+        gallery="architecture"
+        class="stair"
+        frameClass="ar-4x5"
+        sizes="(min-width: 1000px) 34vw, 92vw"
+      />
+      <div class="stair-copy">
+        <p class="display display--sm" data-reveal>A single stair links the garden level, the living floor and the primary retreat.</p>
+        <p class="plan-note muted" data-reveal>{property.planNote} Select a plan to view it with dimensions.</p>
+        <a class="text-link" href="#lanais" data-reveal>Step outside <ArrowRight aria-hidden="true" /></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .head { row-gap: 1.75rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+  @media (max-width: 767px) {
+    .hero-figure :global(.arch-frame) { aspect-ratio: 4 / 5; }
+  }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.4rem; max-width: 14ch; }
+  .head-body { grid-column: 1 / -1; color: var(--stone); }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 7; }
+    .head-body { grid-column: 8 / -1; padding-bottom: 0.5rem; }
+  }
+
+  .levels {
+    list-style: none;
+    padding: 0;
+    margin: clamp(4rem, 8vw, 7rem) 0 0;
+    display: grid;
+    gap: clamp(3rem, 5vw, 4rem) clamp(1.5rem, 3vw, 3rem);
+  }
+  @media (min-width: 1000px) { .levels { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .level { border-top: 1px solid color-mix(in srgb, var(--ivory) 16%, transparent); padding-top: 1.5rem; }
+  .level-head { display: flex; align-items: baseline; gap: 1rem; }
+  .level-num { font-family: var(--font-serif); font-size: 3.2rem; line-height: 1; color: var(--bronze-light); }
+  .level-name { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-2); color: var(--ivory); }
+
+  /* Line drawings re-inked for the dark page: invert, then screen away the black. */
+  .plan { margin-top: 1.5rem; }
+  .plan :global(.plan-frame) {
+    background: var(--charcoal);
+    aspect-ratio: 1 / 1;
+    padding: clamp(0.75rem, 2.4vw, 1.75rem);
+  }
+  .plan :global(.plan-frame img) {
+    object-fit: contain;
+    filter: invert(1) contrast(1.15);
+    mix-blend-mode: screen;
+  }
+  .level-summary { margin-top: 1.4rem; color: var(--stone); max-width: 42ch; }
+  .rooms {
+    margin-top: 1.1rem;
+    display: grid;
+    gap: 0.45rem;
+    font-size: var(--step--1);
+    letter-spacing: 0.02em;
+    color: var(--sand);
+  }
+  .rooms li { display: flex; gap: 0.75rem; }
+  .rooms li::before { content: ''; flex: 0 0 0.9rem; height: 1px; background: var(--bronze); transform: translateY(0.8em); }
+
+  .stair-row { margin-top: clamp(4.5rem, 9vw, 8rem); row-gap: 2.5rem; align-items: center; }
+  .stair { grid-column: 1 / -1; }
+  .stair-copy { grid-column: 1 / -1; display: grid; gap: 1.5rem; justify-items: start; }
+  .stair-copy .display--sm { max-width: 26ch; }
+  .plan-note { font-size: var(--step--1); max-width: 48ch; }
+  .text-link { color: var(--bronze-light); }
+  @media (min-width: 700px) {
+    .stair { grid-column: 1 / span 6; }
+    .stair-copy { grid-column: 7 / -1; padding-left: clamp(0rem, 3vw, 3rem); }
+  }
+  @media (min-width: 1000px) {
+    .stair { grid-column: 2 / span 4; }
+    .stair-copy { grid-column: 7 / span 5; }
+  }
+</style>

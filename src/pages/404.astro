@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import ShowingButton from '../components/ShowingButton.astro';
+import { property } from '../data/property';
+---
+
+<Base title={`Page not found | ${property.name}`} description="This page does not exist." path="/404/" minimalChrome>
+  <section class="section missing">
+    <div class="container--narrow">
+      <p class="eyebrow">404</p>
+      <h1 class="display display--lg">This path leads nowhere.</h1>
+      <p class="body-copy lead">The page you were looking for isn't here, but the house is.</p>
+      <div class="actions" data-hero-cta>
+        <a class="btn" href="/">See {property.address.streetDisplay}</a>
+        <ShowingButton origin="not_found" class="btn btn--ghost" arrow={false} />
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .missing { padding-top: calc(var(--header-h) + 5rem); min-height: 70vh; }
+  .display { margin-top: 1rem; }
+  .lead { margin-top: 1.25rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+</style>

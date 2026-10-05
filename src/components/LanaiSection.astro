@@ -1,0 +1,89 @@
+---
+import Zoomable from './Zoomable.astro';
+import ShowingButton from './ShowingButton.astro';
+import { media } from '../data/media';
+import { SIZES } from '../lib/sizes';
+---
+
+<section class="section lanais" id="lanais" aria-labelledby="lanais-title">
+  <div class="container">
+    <div class="grid-12 head">
+      <div class="head-title">
+        <p class="eyebrow" data-reveal>Indoor · outdoor</p>
+        <h2 class="display display--xl" id="lanais-title" data-reveal>Live outside.</h2>
+      </div>
+      <p class="lede head-sub" data-reveal>Three spacious lanais extend the home's living experience into the tropical surroundings.</p>
+    </div>
+  </div>
+
+  <Zoomable
+    item={media.lanaiCovered}
+    gallery="lanais"
+    class="bleed"
+    frameClass="bleed-frame"
+    sizes={SIZES.bleed3x2}
+    parallax
+    data-reveal-image
+  />
+
+  <div class="container">
+    <div class="grid-12 pair">
+      <Zoomable
+        item={media.lanaiFurnished}
+        gallery="lanais"
+        class="pair-main"
+        frameClass="ar-3x2"
+        sizes={SIZES.eightCols}
+        data-reveal-image
+      />
+      <div class="pair-side">
+        <p class="display display--sm" data-reveal>
+          The expansive upper wraparound lanai is made for morning coffee, yoga and entertaining — with gentle breezes
+          and the garden below.
+        </p>
+        <Zoomable
+          item={media.lanaiRockers}
+          gallery="lanais"
+          class="pair-detail"
+          frameClass="ar-4x5"
+          sizes="(min-width: 1000px) 28vw, 70vw"
+          focus="42% 50%"
+          data-reveal-image
+        />
+      </div>
+    </div>
+
+    <div class="chapter-cta" data-reveal>
+      <p>The best way to understand these lanais is to stand on one.</p>
+      <ShowingButton origin="property_details" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .head { row-gap: 1.5rem; align-items: end; margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+  .head-title { grid-column: 1 / -1; }
+  .head-title .display { margin-top: 1.25rem; }
+  .head-sub { grid-column: 1 / -1; max-width: 26ch; }
+  @media (min-width: 1000px) {
+    .head-title { grid-column: 1 / span 7; }
+    .head-sub { grid-column: 8 / -1; padding-bottom: 1rem; }
+  }
+
+  .bleed :global(.bleed-frame) { height: clamp(26rem, 78vh, 54rem); }
+  .bleed :global(.caption) { width: min(100% - 2 * var(--gutter), var(--maxw)); margin-inline: auto; }
+  @media (max-width: 767px) {
+    .bleed :global(.bleed-frame) { height: auto; aspect-ratio: 4 / 3; }
+  }
+
+  .pair { margin-top: clamp(4rem, 8vw, 7rem); row-gap: 3rem; align-items: start; }
+  .pair-main { grid-column: 1 / -1; }
+  .pair-side { grid-column: 1 / -1; display: grid; gap: 2.5rem; }
+  .pair-side .display--sm { max-width: 24ch; }
+  .pair-detail { width: min(100%, 26rem); justify-self: end; }
+  @media (min-width: 1000px) {
+    .pair-main { grid-column: 1 / span 8; }
+    .pair-side { grid-column: 9 / -1; padding-top: clamp(1rem, 4vw, 4rem); }
+    .pair-detail { width: 100%; }
+  }
+</style>

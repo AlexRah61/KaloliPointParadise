@@ -1,0 +1,21 @@
+{
+  "name": "15–1077 Amau Rd · Kaloli Point Residence",
+  "short_name": "Amau Rd",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#151815",
+  "theme_color": "#151815",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

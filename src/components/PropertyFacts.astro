@@ -1,0 +1,86 @@
+---
+import { property } from '../data/property';
+const f = property.facts;
+const items = [
+  { value: String(f.beds), label: 'Bedrooms' },
+  { value: String(f.baths), label: 'Bathrooms' },
+  { value: f.sqft.toLocaleString('en-US'), label: 'Sq ft' },
+  { value: f.acres.toFixed(2), label: 'Acres' },
+  { value: String(f.yearBuilt), label: 'Built' },
+];
+---
+
+<section class="facts" id="facts" aria-labelledby="facts-title">
+  <h2 id="facts-title" class="visually-hidden">Property facts</h2>
+  <div class="container">
+    <dl class="facts-grid">
+      {items.map((it) => (
+        <div class="fact" data-reveal>
+          <dt>{it.label}</dt>
+          <dd>{it.value}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="facts-note dot-list" data-reveal>
+      <span>Three levels</span>
+      <span>Three lanais</span>
+      <span>Renovated {f.renovated}</span>
+      <span>MLS® {property.mls}</span>
+    </p>
+  </div>
+</section>
+
+<style>
+  .facts {
+    background: var(--ivory);
+    padding-block: clamp(3rem, 6vw, 5rem) clamp(2.5rem, 5vw, 4rem);
+    border-bottom: var(--rule);
+  }
+  .facts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+  .fact {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    padding: 1.4rem 0 1.4rem 0;
+    border-top: var(--rule);
+  }
+  dd {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 2.2rem + 3.6vw, 5.6rem);
+    line-height: 0.9;
+    font-weight: 400;
+    color: var(--ink);
+    font-variant-numeric: lining-nums;
+  }
+  dt {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--moss-deep);
+  }
+  .fact:last-child { grid-column: 1 / -1; }
+  .facts-note {
+    margin-top: 1.5rem;
+    font-size: 0.74rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bronze-deep);
+  }
+  @media (min-width: 640px) {
+    .facts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .fact:last-child { grid-column: auto; }
+  }
+  @media (min-width: 1000px) {
+    .facts-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .fact { border-top: 0; padding: 0 clamp(1rem, 2vw, 2rem); border-left: var(--rule); }
+    .fact:first-child { padding-left: 0; border-left: 0; }
+    .facts-note { margin-top: clamp(2rem, 3.5vw, 3rem); }
+  }
+</style>

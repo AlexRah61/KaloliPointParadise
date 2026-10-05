@@ -1,0 +1,32 @@
+---
+// The single "Request Private Showing" trigger. Every placement opens the same showing-request
+// experience (sheet with the one form); without JavaScript it falls back to the in-page form.
+import { ArrowRight } from '@lucide/astro';
+import { property } from '../data/property';
+
+export type CtaOrigin =
+  | 'hero'
+  | 'desktop_header'
+  | 'mobile_sticky'
+  | 'menu'
+  | 'property_details'
+  | 'gallery'
+  | 'film'
+  | 'final_cta'
+  | 'footer'
+  | 'not_found';
+
+interface Props {
+  origin: CtaOrigin;
+  class?: string;
+  arrow?: boolean;
+  label?: string;
+  [key: `data-${string}`]: string | boolean | undefined;
+}
+const { origin, class: cls = 'btn', arrow = true, label = property.cta.primary, ...rest } = Astro.props;
+---
+
+<a class={cls} href="/#showing" data-showing-cta={origin} aria-haspopup={origin === 'not_found' ? undefined : 'dialog'} {...rest}>
+  <span>{label}</span>
+  {arrow && <ArrowRight aria-hidden="true" />}
+</a>

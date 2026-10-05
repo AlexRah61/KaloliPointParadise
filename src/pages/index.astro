@@ -1,0 +1,121 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import PropertyFacts from '../components/PropertyFacts.astro';
+import StorySection from '../components/StorySection.astro';
+import ArchitectureSection from '../components/ArchitectureSection.astro';
+import LanaiSection from '../components/LanaiSection.astro';
+import LivingSection from '../components/LivingSection.astro';
+import PrimaryRetreat from '../components/PrimaryRetreat.astro';
+import FlexSpace from '../components/FlexSpace.astro';
+import GroundsSection from '../components/GroundsSection.astro';
+import RenovationSection from '../components/RenovationSection.astro';
+import Gallery from '../components/Gallery.astro';
+import PropertyFilm from '../components/PropertyFilm.astro';
+import UGCSection from '../components/UGCSection.astro';
+import LocationSection from '../components/LocationSection.astro';
+import EveningsSection from '../components/EveningsSection.astro';
+import ShowingCTA from '../components/ShowingCTA.astro';
+import ShowingForm from '../components/ShowingForm.astro';
+import AgentContact from '../components/AgentContact.astro';
+import { getImage } from 'astro:assets';
+import { property, SITE_URL } from '../data/property';
+import { media } from '../data/media';
+import { responsive } from '../lib/images';
+
+const heroSet = await responsive(media.heroAerial);
+const heroSizes = '(max-width: 767px) calc(64vh * 1.7778), (min-aspect-ratio: 16/9) 100vw, calc(100vh * 1.7778)';
+
+const schemaImages = await Promise.all(
+  [media.heroAerial, media.architectureAerial, media.kitchenWide, media.lanaiFurnished, media.primaryBedroom].map(
+    async (m) => new URL((await getImage({ src: m.src, width: 1600, format: 'jpg', quality: 84 })).src, SITE_URL).toString(),
+  ),
+);
+const a = property.agent;
+const addr = property.address;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: `${addr.full} | ${property.name}`,
+    url: `${SITE_URL}/`,
+    description: property.seo.description,
+    image: schemaImages,
+    offers: {
+      '@type': 'Offer',
+      price: property.price,
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      offeredBy: {
+        '@type': 'Person',
+        name: a.name,
+        jobTitle: a.title,
+        telephone: '+1-808-756-8811',
+        worksFor: {
+          '@type': 'RealEstateAgent',
+          name: a.brokerage,
+          telephone: '+1-808-934-7050',
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: '234 Waianuenue Ave, Suite 219',
+            addressLocality: 'Hilo',
+            addressRegion: 'HI',
+            postalCode: '96720',
+            addressCountry: 'US',
+          },
+        },
+      },
+    },
+    mainEntity: {
+      '@type': 'SingleFamilyResidence',
+      name: property.name,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: addr.street,
+        addressLocality: addr.city,
+        addressRegion: addr.state,
+        postalCode: addr.zip,
+        addressCountry: 'US',
+      },
+      geo: { '@type': 'GeoCoordinates', latitude: property.geo.lat, longitude: property.geo.lng },
+      numberOfBedrooms: property.facts.beds,
+      numberOfBathroomsTotal: property.facts.baths,
+      numberOfFullBathrooms: property.facts.fullBaths,
+      floorSize: { '@type': 'QuantitativeValue', value: property.facts.sqft, unitCode: 'FTK' },
+      yearBuilt: property.facts.yearBuilt,
+      additionalProperty: [
+        { '@type': 'PropertyValue', name: 'Lot size', value: '0.50 acre' },
+        { '@type': 'PropertyValue', name: 'Levels', value: 3 },
+        { '@type': 'PropertyValue', name: 'Lanais', value: 3 },
+        { '@type': 'PropertyValue', name: 'MLS number', value: property.mls },
+        { '@type': 'PropertyValue', name: 'Neighborhood', value: `${addr.neighborhood}, ${addr.subdivision}` },
+      ],
+    },
+  },
+];
+---
+
+<Base jsonLd={jsonLd}>
+  <Fragment slot="head">
+    <link rel="preload" as="image" type="image/avif" imagesrcset={heroSet.avif} imagesizes={heroSizes} fetchpriority="high" />
+  </Fragment>
+
+  <Hero />
+  <PropertyFacts />
+  <StorySection />
+  <ArchitectureSection />
+  <LanaiSection />
+  <LivingSection />
+  <PrimaryRetreat />
+  <FlexSpace />
+  <GroundsSection />
+  <RenovationSection />
+  <Gallery />
+  <PropertyFilm />
+  <UGCSection />
+  <LocationSection />
+  <EveningsSection />
+  <ShowingCTA />
+  <ShowingForm />
+  <AgentContact />
+</Base>

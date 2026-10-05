@@ -1,0 +1,13 @@
+---
+// Brand mark: the home's octagonal footprint.
+interface Props {
+  class?: string;
+  stroke?: number;
+}
+const { class: cls, stroke = 1.25 } = Astro.props;
+---
+
+<svg class={cls} viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
+  <path d="M11.3 2.5h9.4l6.8 6.8v9.4l-6.8 6.8h-9.4l-6.8-6.8V9.3z" stroke="currentColor" stroke-width={stroke} transform="translate(0 2)" />
+  <path d="M13.2 9.5h5.6l4 4v5.6l-4 4h-5.6l-4-4v-5.6z" stroke="currentColor" stroke-width={stroke * 0.8} opacity="0.55" transform="translate(0 -0.3)" />
+</svg>

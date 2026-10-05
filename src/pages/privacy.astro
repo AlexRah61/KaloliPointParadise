@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import { property } from '../data/property';
+const a = property.agent;
+const updated = 'October 4, 2026';
+---
+
+<Base title={`Privacy notice | ${property.name}`} description="How this property website handles showing requests and visitor data." path="/privacy/" minimalChrome>
+  <section class="section legal-page">
+    <div class="container--narrow">
+      <p class="eyebrow">Privacy notice</p>
+      <h1 class="display display--lg">Your information, plainly.</h1>
+      <p class="muted updated">Last updated {updated}</p>
+
+      <div class="body-copy prose">
+        <h2>Who runs this website</h2>
+        <p>
+          {property.address.streetDisplay} ({property.name}) is an independent marketing website for a single property.
+          It is not the MLS and is not the website of {a.brokerage}. The property is listed by {a.name} ({a.license}),
+          {a.title}, {a.brokerage}.
+        </p>
+
+        <h2>What we collect when you request a showing</h2>
+        <p>
+          Your name, phone number, email address, preferred and alternative dates and times, showing type, whether you are
+          flexible, and any message you write. We also record how you found the site (campaign tags such as utm_source,
+          ad click identifiers such as gclid or fbclid, the referring website and the landing page), the time of the
+          request, and a one-way hash of your IP address used only to stop spam.
+        </p>
+
+        <h2>How it is used</h2>
+        <p>
+          Your request is sent to the listing agent so she can call you to arrange a showing, with a copy to the website's
+          administrator, and you receive an acknowledgement by email. A showing is never confirmed by this website; only
+          the listing agent can confirm a time with you. We do not sell your information or share it for anyone else's
+          marketing.
+        </p>
+
+        <h2>Where it is stored</h2>
+        <p>
+          Requests are stored in a Cloudflare D1 database and emails are delivered by Resend. Requests are kept while the
+          property is marketed and deleted within twelve months after it sells or is withdrawn.
+        </p>
+
+        <h2>Analytics</h2>
+        <p>
+          The site uses Google Analytics 4 to understand, in aggregate, how it is used: pages viewed, opening the gallery or
+          film, clicks on showing or contact buttons, and whether a showing request was submitted. Google Analytics sets its
+          own cookies and is governed by Google's privacy policy; you can opt out with Google's
+          <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener">browser add-on</a>. Your name, phone number,
+          email, message and requested showing times are never sent to Google or to any other analytics or advertising
+          platform.
+        </p>
+
+        <h2>Bot protection</h2>
+        <p>Cloudflare Turnstile checks that requests come from a person. It does not require you to solve puzzles in most cases.</p>
+
+        <h2>Your choices</h2>
+        <p>
+          To ask what we hold about you or to have it deleted, email
+          <a href="mailto:privacy@kalolipointparadisehawaii.com">privacy@kalolipointparadisehawaii.com</a>.
+        </p>
+      </div>
+
+      <p class="back"><a class="text-link" href="/">Back to the property</a></p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .legal-page { padding-top: calc(var(--header-h) + 4rem); }
+  .display { margin-top: 1rem; }
+  .updated { margin-top: 1rem; font-size: var(--step--1); }
+  .prose { margin-top: 2.5rem; max-width: 68ch; }
+  .prose h2 { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-2); color: var(--ink); margin-top: 2.25rem; margin-bottom: 0.6rem; }
+  .prose a { color: var(--forest); }
+  .back { margin-top: 3rem; }
+</style>

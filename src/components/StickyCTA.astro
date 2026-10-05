@@ -1,0 +1,51 @@
+---
+// Portrait-phone action bar. Larger screens carry the same CTA in the header instead.
+import { Phone } from '@lucide/astro';
+import ShowingButton from './ShowingButton.astro';
+import { property } from '../data/property';
+---
+
+<div class="sticky-cta" data-sticky-cta data-visible="false">
+  <ShowingButton origin="mobile_sticky" class="btn btn--light sticky-main" arrow={false} />
+  <a class="sticky-call" href={property.agent.phoneHref} data-track="agent_contact_click" data-track-location="sticky" aria-label={`Call the listing agent, ${property.agent.phone}`}>
+    <Phone aria-hidden="true" />
+  </a>
+</div>
+
+<style>
+  .sticky-cta { display: none; }
+
+  @media (max-width: 767px) and (min-height: 501px) {
+    .sticky-cta {
+      position: fixed;
+      z-index: 90;
+      inset: auto 0 0 0;
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.5rem max(var(--gutter), env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
+      background: color-mix(in srgb, var(--ink) 92%, transparent);
+      backdrop-filter: saturate(1.2) blur(14px);
+      -webkit-backdrop-filter: saturate(1.2) blur(14px);
+      border-top: 1px solid color-mix(in srgb, var(--ivory) 10%, transparent);
+      transform: translateY(105%);
+      visibility: hidden;
+      transition: transform 0.3s var(--ease), visibility 0s linear 0.3s;
+    }
+    .sticky-cta[data-visible='true'] {
+      transform: translateY(0);
+      visibility: visible;
+      transition: transform 0.3s var(--ease), visibility 0s linear 0s;
+    }
+    .sticky-cta :global(.sticky-main) { flex: 1; min-height: 3rem; padding-inline: 1rem; }
+    .sticky-call {
+      flex: none;
+      width: 3rem;
+      min-height: 3rem;
+      display: grid;
+      place-items: center;
+      color: var(--ivory);
+      border: 1px solid color-mix(in srgb, var(--ivory) 32%, transparent);
+    }
+    .sticky-call :global(svg) { width: 1.15rem; height: 1.15rem; }
+  }
+</style>

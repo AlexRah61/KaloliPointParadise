@@ -1,0 +1,27 @@
+# dependencies / build output
+node_modules/
+dist/
+.astro/
+.wrangler/
+worker-configuration.d.ts
+
+# local secrets (never commit)
+.dev.vars
+.dev.vars.*
+.env
+.env.local
+.env.*.local
+
+# 211 MB master film stays on the build machine; web derivatives live in public/media
+assets/*.mov
+# Owner phone originals carry GPS metadata; the site uses the stripped copies in src/assets/derived/owner
+assets/Photos/Fruit and ocean photos/
+
+# personal editor settings
+.vscode/
+
+# QA / audit scratch
+tools/_audit/
+test-results/
+playwright-report/
+qa/

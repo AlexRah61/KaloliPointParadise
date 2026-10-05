@@ -1,0 +1,41 @@
+---
+import { Mail, Phone } from '@lucide/astro';
+import Octagon from './Octagon.astro';
+import { property } from '../data/property';
+const a = property.agent;
+---
+
+<section class="agent" id="agent" aria-labelledby="agent-title">
+  <div class="container agent-inner">
+    <Octagon class="mark" />
+    <div class="who">
+      <p class="eyebrow">Listing agent</p>
+      <h2 class="name" id="agent-title">{a.name}</h2>
+      <p class="role">{a.title} · {a.brokerage} · License {a.license}</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href={a.phoneHref} data-track="agent_contact_click" data-track-location="agent">
+        <Phone aria-hidden="true" /><span>{a.phone}</span>
+      </a>
+      <a class="btn btn--ghost" href={`mailto:${a.email}?subject=${encodeURIComponent(`${property.address.streetDisplay} (MLS ${property.mls})`)}`} data-track="agent_contact_click" data-track-location="agent">
+        <Mail aria-hidden="true" /><span>Email {a.firstName}</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .agent { background: var(--white); border-top: var(--rule); padding-block: clamp(3rem, 6vw, 4.5rem); }
+  .agent-inner { display: grid; gap: 1.5rem; align-items: center; }
+  .agent-inner :global(.mark) { width: 48px; height: 48px; color: var(--bronze); }
+  .name { margin-top: 0.75rem; font-family: var(--font-serif); font-weight: 400; font-size: var(--step-3); line-height: 1; color: var(--ink); }
+  .role { margin-top: 0.6rem; color: var(--moss-deep); font-size: var(--step--1); letter-spacing: 0.02em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .actions :global(svg) { width: 1rem; height: 1rem; }
+  @media (min-width: 900px) {
+    .agent-inner { grid-template-columns: auto 1fr auto; gap: 2rem; }
+  }
+  @media (max-width: 559px) {
+    .actions .btn { width: 100%; }
+  }
+</style>

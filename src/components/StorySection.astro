@@ -1,0 +1,49 @@
+---
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+---
+
+<section class="section story" id="story" aria-labelledby="story-title">
+  <div class="container grid-12 story-grid">
+    <div class="story-text">
+      <p class="eyebrow" data-reveal>{property.address.neighborhood} · {property.address.subdivision}</p>
+      <h2 class="lede" id="story-title" data-reveal>
+        Half an acre of tropical garden, three levels of light, and the shoreline a short walk away.
+      </h2>
+      <div class="body-copy story-body" data-reveal>
+        <p>
+          Set in the Kaloli Point area of Hawaiian Paradise Park — prized for its sunbelt microclimate, paved roads and
+          scenic coastal surroundings — this octagonal tri-level home was extensively renovated in 2023.
+        </p>
+        <p>
+          Mature palms and fruit trees screen the grounds, and three lanais open the house to the breeze, the light and the
+          garden on every level.
+        </p>
+      </div>
+    </div>
+    <Zoomable
+      item={media.entry}
+      gallery="story"
+      class="story-figure"
+      frameClass="ar-4x5"
+      sizes="(min-width: 1000px) 30vw, (min-width: 640px) 60vw, 92vw"
+      focus="50% 50%"
+    />
+  </div>
+</section>
+
+<style>
+  .story-grid { row-gap: 3rem; align-items: end; }
+  .story-text { grid-column: 1 / -1; }
+  .lede { margin-top: 1.75rem; max-width: 22ch; font-size: clamp(2rem, 1.3rem + 2.9vw, 3.9rem); line-height: 1.12; }
+  .story-body { margin-top: clamp(1.75rem, 3vw, 2.5rem); }
+  .story-figure { grid-column: 1 / -1; }
+  @media (min-width: 640px) {
+    .story-figure { grid-column: 5 / -1; }
+  }
+  @media (min-width: 1000px) {
+    .story-text { grid-column: 1 / span 7; padding-bottom: 1rem; }
+    .story-figure { grid-column: 9 / -1; }
+  }
+</style>

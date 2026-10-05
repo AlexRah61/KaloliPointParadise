@@ -1,0 +1,93 @@
+---
+import { Play } from '@lucide/astro';
+import Photo from './Photo.astro';
+import ShowingButton from './ShowingButton.astro';
+import { media } from '../data/media';
+import { property } from '../data/property';
+import { SIZES } from '../lib/sizes';
+---
+
+<section class="section section--ink film on-dark" id="film" aria-labelledby="film-title">
+  <div class="container">
+    <div class="head">
+      <div>
+        <p class="eyebrow" data-reveal>The property film</p>
+        <h2 class="display display--lg" id="film-title" data-reveal>Fifty-six seconds at Kaloli Point.</h2>
+      </div>
+      <p class="meta" data-reveal>{property.video.durationLabel} · Up to 4K · Sound on</p>
+    </div>
+
+    <div class="player frame ar-16x9" data-film data-hls={property.video.hls} data-mp4={property.video.mp4} data-state="idle">
+      <video
+        class="video"
+        playsinline
+        preload="none"
+        aria-label={`Property film of ${property.address.streetDisplay}, ${property.video.durationLabel}`}
+        data-film-video
+      ></video>
+      <div class="poster" data-film-poster>
+        <Photo item={media.filmOcean} alt="" sizes={SIZES.container} />
+      </div>
+      <button class="play" type="button" data-film-play>
+        <span class="play-ring" aria-hidden="true"><Play /></span>
+        <span class="play-label">Play the film <span class="visually-hidden">({property.video.durationLabel}, with sound)</span></span>
+      </button>
+      <p class="film-status" role="status" aria-live="polite" data-film-status></p>
+    </div>
+
+    <div class="chapter-cta" data-reveal>
+      <p>Seen the film? Now walk the lanais yourself.</p>
+      <ShowingButton origin="film" class="btn btn--light" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1.25rem 2rem;
+    margin-bottom: clamp(2rem, 4vw, 3.5rem);
+  }
+  .head .display { margin-top: 1.25rem; max-width: 16ch; }
+  .meta { font-size: 0.74rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--sand); }
+
+  .player { background: #000; }
+  .video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .poster { position: absolute; inset: 0; transition: opacity 0.6s var(--ease); }
+  .poster :global(picture), .poster :global(img) { width: 100%; height: 100%; }
+  .poster :global(img) { object-fit: cover; }
+  .poster::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(10, 12, 10, 0.1), rgba(10, 12, 10, 0.55)); }
+  .play {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 1.1rem;
+    border: 0;
+    background: transparent;
+    color: var(--ivory);
+  }
+  .play-ring {
+    width: clamp(4.5rem, 9vw, 7rem);
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--ivory) 70%, transparent);
+    background: color-mix(in srgb, var(--ink) 30%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: transform 0.5s var(--ease), background-color 0.5s var(--ease);
+  }
+  .play-ring :global(svg) { width: 32%; height: 32%; fill: currentColor; margin-left: 6%; }
+  .play:hover .play-ring { transform: scale(1.06); background: color-mix(in srgb, var(--bronze-light) 30%, transparent); }
+  .play-label { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+  .film-status { position: absolute; left: 1rem; bottom: 1rem; font-size: 0.8rem; color: var(--stone); }
+  .player[data-state='playing'] .poster, .player[data-state='playing'] .play,
+  .player[data-state='loading'] .play-label { opacity: 0; pointer-events: none; }
+  .player[data-state='playing'] .play { display: none; }
+</style>

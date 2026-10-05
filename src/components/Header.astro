@@ -1,0 +1,222 @@
+---
+import { property } from '../data/property';
+import Octagon from './Octagon.astro';
+import ShowingButton from './ShowingButton.astro';
+
+interface Props {
+  minimal?: boolean;
+}
+const { minimal = false } = Astro.props;
+const links = [
+  { href: '/#architecture', label: 'The home' },
+  { href: '/#lanais', label: 'Lanais' },
+  { href: '/#gallery', label: 'Gallery' },
+  { href: '/#film', label: 'Film' },
+  { href: '/#location', label: 'Kaloli Point' },
+];
+---
+
+<header class="site-header" data-header data-state={minimal ? 'solid' : 'over-hero'}>
+  <div class="bar">
+    <a class="brand" href="/#top" aria-label={`${property.address.streetDisplay}, home`}>
+      <Octagon class="brand-mark" />
+      <span class="brand-text">
+        <span class="brand-name">{property.address.streetDisplay}</span>
+        <span class="brand-sub">Kaloli Point · {property.address.stateDisplay}</span>
+      </span>
+    </a>
+
+    {!minimal && (
+      <nav class="nav-desktop" aria-label="Sections">
+        <ul role="list">
+          {links.map((l) => <li><a href={l.href}>{l.label}</a></li>)}
+        </ul>
+      </nav>
+    )}
+
+    <div class="actions">
+      <ShowingButton origin="desktop_header" class="btn header-cta" arrow={false} />
+      {!minimal && (
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav" data-menu-toggle>
+          <span class="visually-hidden">Menu</span>
+          <span class="bars" aria-hidden="true"><span></span><span></span></span>
+        </button>
+      )}
+    </div>
+  </div>
+
+  {!minimal && (
+    <nav id="mobile-nav" class="nav-mobile" aria-label="Sections" hidden data-mobile-nav>
+      <ul role="list">
+        {links.map((l, i) => (
+          <li><a href={l.href} data-menu-link><span class="num">0{i + 1}</span>{l.label}</a></li>
+        ))}
+      </ul>
+      <div class="nav-mobile-foot">
+        <ShowingButton origin="menu" class="btn btn--light btn--block" arrow={false} data-menu-link />
+        <a class="text-link" href={property.agent.phoneHref} data-track="agent_contact_click" data-track-location="menu">Call {property.agent.phone}</a>
+      </div>
+    </nav>
+  )}
+</header>
+
+<style>
+  .site-header {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 100;
+    color: var(--ivory);
+    transition: background-color 0.5s var(--ease), color 0.5s var(--ease), box-shadow 0.5s var(--ease), transform 0.5s var(--ease);
+  }
+  .site-header::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 -40px 0;
+    background: linear-gradient(to bottom, rgba(10, 12, 10, 0.55), rgba(10, 12, 10, 0));
+    pointer-events: none;
+    transition: opacity 0.5s var(--ease);
+  }
+  .site-header[data-state='solid'] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ivory) 92%, transparent);
+    backdrop-filter: saturate(1.2) blur(14px);
+    -webkit-backdrop-filter: saturate(1.2) blur(14px);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  .site-header[data-state='solid']::before { opacity: 0; }
+
+  .bar {
+    position: relative;
+    height: var(--header-h);
+    width: min(100% - 2 * var(--gutter), var(--maxw));
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    transition: height 0.4s var(--ease);
+  }
+  /* Once past the hero the bar tightens so it covers as little photography as possible. */
+  @media (min-width: 1100px) {
+    .site-header[data-state='solid'] .bar { height: 62px; }
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    text-decoration: none;
+    min-height: 44px;
+  }
+  .brand :global(.brand-mark) { width: 30px; height: 30px; color: var(--bronze-light); flex: none; }
+  .site-header[data-state='solid'] .brand :global(.brand-mark) { color: var(--bronze); }
+  .brand-text { display: grid; line-height: 1.1; }
+  .brand-name {
+    font-family: var(--font-serif);
+    font-size: 1.28rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .brand-sub {
+    font-size: 0.62rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-top: 0.2rem;
+  }
+
+  .nav-desktop { display: none; }
+  .nav-desktop ul { display: flex; gap: clamp(1.25rem, 2.2vw, 2.25rem); }
+  .nav-desktop a {
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding-block: 0.6rem;
+    background: linear-gradient(currentColor, currentColor) 0 calc(100% - 0.35rem) / 0 1px no-repeat;
+    transition: background-size 0.4s var(--ease);
+  }
+  .nav-desktop a:hover { background-size: 100% 1px; }
+
+  .actions { display: flex; align-items: center; gap: 0.75rem; }
+  .actions :global(.header-cta) {
+    --btn-bg: var(--bronze-light);
+    --btn-fg: var(--ink);
+    --btn-border: var(--bronze-light);
+    min-height: 2.75rem;
+    padding: 0.7rem 1.15rem;
+    font-size: 0.7rem;
+    transition: background-color 0.35s var(--ease), color 0.35s var(--ease), border-color 0.35s var(--ease),
+      opacity 0.3s var(--ease), visibility 0s linear 0s;
+  }
+  .actions :global(.header-cta:hover) { --btn-bg: var(--ivory); --btn-border: var(--ivory); }
+  .site-header[data-state='solid'] .actions :global(.header-cta) { --btn-bg: var(--ink); --btn-fg: var(--ivory); --btn-border: var(--ink); }
+  .site-header[data-state='solid'] .actions :global(.header-cta:hover) { --btn-bg: var(--forest); --btn-border: var(--forest); }
+  /* While the form or closing CTA is on screen the duplicate steps back (space is kept: no layout shift). */
+  .site-header[data-cta='muted'] .actions :global(.header-cta) {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s var(--ease), visibility 0s linear 0.3s;
+  }
+
+  .menu-toggle {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    border-radius: 0;
+    color: inherit;
+  }
+  .bars { display: grid; gap: 6px; width: 18px; }
+  .bars span { height: 1.5px; background: currentColor; transition: transform 0.35s var(--ease); }
+  .menu-toggle[aria-expanded='true'] .bars span:first-child { transform: translateY(3.75px) rotate(45deg); }
+  .menu-toggle[aria-expanded='true'] .bars span:last-child { transform: translateY(-3.75px) rotate(-45deg); }
+
+  .nav-mobile {
+    position: fixed;
+    inset: var(--header-h) 0 0 0;
+    background: var(--ink);
+    color: var(--ivory);
+    padding: 2rem var(--gutter) calc(2rem + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: auto;
+  }
+  .nav-mobile[hidden] { display: none; }
+  .nav-mobile ul { display: grid; }
+  .nav-mobile li { border-bottom: 1px solid color-mix(in srgb, var(--ivory) 14%, transparent); }
+  .nav-mobile a[data-menu-link]:not(.btn) {
+    display: flex;
+    align-items: baseline;
+    gap: 1.1rem;
+    padding-block: 1.05rem;
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    text-decoration: none;
+  }
+  .num { font-family: var(--font-sans); font-size: 0.7rem; letter-spacing: 0.2em; color: var(--bronze-light); }
+  .nav-mobile-foot { display: grid; gap: 1.25rem; justify-items: start; margin-top: 2.5rem; }
+  .site-header:has(.menu-toggle[aria-expanded='true']) { color: var(--ivory); background: var(--ink); }
+
+  @media (max-width: 699px) {
+    .brand-sub { display: none; }
+    .actions :global(.header-cta) { padding-inline: 0.85rem; letter-spacing: 0.12em; }
+  }
+  /* Portrait phones: the bottom action bar carries the CTA, so the header stays minimal. */
+  @media (max-width: 767px) and (min-height: 501px) {
+    .actions :global(.header-cta) { display: none; }
+  }
+  @media (max-width: 420px) {
+    .brand-name { font-size: 1.08rem; }
+    .brand { gap: 0.6rem; }
+    .brand :global(.brand-mark) { width: 26px; height: 26px; }
+  }
+  @media (min-width: 1100px) {
+    .nav-desktop { display: block; }
+    .menu-toggle { display: none; }
+  }
+</style>

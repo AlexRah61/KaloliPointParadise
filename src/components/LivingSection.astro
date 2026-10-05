@@ -1,0 +1,69 @@
+---
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { SIZES } from '../lib/sizes';
+---
+
+<section class="section section--white living" id="interiors" aria-labelledby="living-title">
+  <div class="container grid-12 living-grid">
+    <div class="intro">
+      <p class="eyebrow" data-reveal>Level two · kitchen &amp; family room</p>
+      <h2 class="display display--lg" id="living-title" data-reveal>Designed for daily island living.</h2>
+    </div>
+
+    <Zoomable
+      item={media.kitchenWide}
+      gallery="interiors"
+      class="kitchen"
+      frameClass="ar-3x2"
+      sizes={SIZES.eightCols}
+      data-reveal-image
+    />
+
+    <div class="living-copy body-copy" data-reveal>
+      <p>
+        The kitchen was renovated in 2023 with new cabinets, countertops and appliances, gathered around a waterfall-edge
+        island with room to sit.
+      </p>
+      <p>The family room shares the floor, and French doors open the whole level to the wraparound lanai.</p>
+    </div>
+
+    <Zoomable
+      item={media.familyRoom}
+      gallery="interiors"
+      class="family"
+      frameClass="ar-3x2"
+      sizes={SIZES.sevenCols}
+      data-reveal-image
+    />
+
+    <Zoomable
+      item={media.kitchenDetail}
+      gallery="interiors"
+      class="detail"
+      frameClass="ar-4x5"
+      sizes={SIZES.fourCols}
+      data-reveal-image
+    />
+  </div>
+</section>
+
+<style>
+  .living-grid { row-gap: clamp(2.5rem, 5vw, 4.5rem); align-items: start; }
+  .intro { grid-column: 1 / -1; }
+  .intro .display { margin-top: 1.25rem; max-width: 16ch; }
+  .kitchen { grid-column: 1 / -1; }
+  .living-copy { grid-column: 1 / -1; }
+  .family { grid-column: 1 / -1; }
+  .detail { grid-column: 3 / -1; }
+  @media (min-width: 1000px) {
+    .intro { grid-column: 1 / span 8; }
+    .kitchen { grid-column: 1 / span 8; }
+    .living-copy { grid-column: 9 / -1; align-self: end; padding-bottom: 2.5rem; }
+    .family { grid-column: 4 / -1; grid-row: 3; }
+    .detail { grid-column: 1 / span 3; grid-row: 3; align-self: end; }
+  }
+  @media (max-width: 999px) {
+    .detail { display: none; }
+  }
+</style>

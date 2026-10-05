@@ -1,0 +1,53 @@
+---
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { SIZES } from '../lib/sizes';
+---
+
+<section class="section flex" id="flex" aria-labelledby="flex-title">
+  <div class="container grid-12 flex-grid">
+    <Zoomable
+      item={media.flexRoom}
+      gallery="flex"
+      class="flex-figure"
+      frameClass="ar-4x3"
+      sizes={SIZES.sevenCols}
+      data-reveal-image
+    />
+    <div class="flex-copy">
+      <p class="eyebrow" data-reveal>Level one · garden level</p>
+      <h2 class="display display--lg" id="flex-title" data-reveal>Room to adapt.</h2>
+      <p class="uses dot-list" data-reveal>
+        <span>Guest space</span>
+        <span>Work from home</span>
+        <span>Flex space</span>
+      </p>
+      <div class="body-copy" data-reveal>
+        <p>
+          On the garden level, a generous 23′10″ × 13′11″ bedroom shares the floor with a second living room and a full
+          bath — set up today as a guest room and home office.
+        </p>
+        <p>It is the kind of flexibility most two-bedroom homes don't offer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .flex-grid { row-gap: 2.5rem; align-items: center; }
+  .flex-figure { grid-column: 1 / -1; }
+  .flex-copy { grid-column: 1 / -1; display: grid; gap: 1.4rem; justify-items: start; }
+  .uses {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding-block: 1rem;
+    border-block: var(--rule);
+  }
+  @media (min-width: 1000px) {
+    .flex-figure { grid-column: 1 / span 7; }
+    .flex-copy { grid-column: 9 / -1; }
+  }
+</style>

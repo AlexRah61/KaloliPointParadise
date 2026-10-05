@@ -1,0 +1,52 @@
+---
+import Zoomable from './Zoomable.astro';
+import { media } from '../data/media';
+import { SIZES } from '../lib/sizes';
+---
+
+<section class="section section--charcoal retreat on-dark" id="retreat" aria-labelledby="retreat-title">
+  <div class="container grid-12 retreat-grid">
+    <div class="intro">
+      <p class="eyebrow" data-reveal>Level three · primary suite</p>
+      <h2 class="display display--lg" id="retreat-title" data-reveal>A private top-floor retreat.</h2>
+      <div class="body-copy copy" data-reveal>
+        <p>
+          The entire top floor belongs to the primary suite: a 26′9″ × 19′10″ bedroom ringed with windows and opening to
+          its own lanai, a walk-in closet, and a bath with a freestanding tub and double vanity.
+        </p>
+      </div>
+    </div>
+
+    <Zoomable
+      item={media.primaryBedroom}
+      gallery="retreat"
+      class="bedroom"
+      frameClass="ar-3x2"
+      sizes={SIZES.eightCols}
+      data-reveal-image
+    />
+
+    <Zoomable
+      item={media.primaryBath}
+      gallery="retreat"
+      class="bath"
+      frameClass="ar-3x2"
+      sizes={SIZES.sevenCols}
+      data-reveal-image
+    />
+  </div>
+</section>
+
+<style>
+  .retreat-grid { row-gap: clamp(2.5rem, 5vw, 4rem); align-items: start; }
+  .intro { grid-column: 1 / -1; }
+  .intro .display { margin-top: 1.25rem; max-width: 13ch; }
+  .copy { margin-top: 1.75rem; color: var(--stone); }
+  .bedroom { grid-column: 1 / -1; }
+  .bath { grid-column: 2 / -1; }
+  @media (min-width: 1000px) {
+    .intro { grid-column: 1 / span 4; grid-row: 1 / span 2; position: sticky; top: calc(var(--header-h) + 3rem); }
+    .bedroom { grid-column: 5 / -1; grid-row: 1; }
+    .bath { grid-column: 6 / -1; grid-row: 2; margin-top: clamp(1rem, 3vw, 3rem); }
+  }
+</style>

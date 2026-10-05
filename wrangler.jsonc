@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "kaloli-point-residence",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  // Retries listing-agent notifications that failed (lead stays safe in D1 meanwhile).
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kaloli-leads",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // LEAD_TO_EMAIL, LEAD_CC_EMAIL and TEST_LEAD_EMAILS are Worker secrets (kept out of this public repo; local values in .dev.vars).
+  // LEAD_TO_EMAIL stays on the test recipient until the listing agent's go-live is approved.
+  "vars": {
+    "SITE_URL": "https://kalolipointparadisehawaii.com",
+    "LEAD_FROM_EMAIL": "Kaloli Point Paradise <showings@mail.kalolipointparadisehawaii.com>",
+    // "send" delivers through Resend; "log" only logs (local development without an API key).
+    "EMAIL_MODE": "send",
+    // Hostnames Turnstile siteverify must report. Production only: never localhost/127.0.0.1 (local values live in .dev.vars).
+    "TURNSTILE_HOSTNAMES": "kalolipointparadisehawaii.com,www.kalolipointparadisehawaii.com"
+  }
+}
