@@ -609,12 +609,17 @@ test.describe('page', () => {
         vw: window.innerWidth,
         overlap,
         bg: getComputedStyle(media.closest('.night')!).backgroundImage,
+        mask: (() => {
+          const s = getComputedStyle(media);
+          return s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage ?? '');
+        })(),
       };
     });
     expect(Math.abs(m.ratio - m.natural), 'shown at its own proportions').toBeLessThan(0.01);
     expect(m.fit).toBe('contain');
     expect(m.overlap, 'no text over the photograph').toBe(false);
     expect(m.bg).toContain('gradient');
+    expect(m.mask.match(/linear-gradient/g) ?? [], 'feathered into the field on all four edges').toHaveLength(2);
     if (m.vw >= 900 || (m.vh <= 500 && m.vw >= 560)) expect(m.h, 'as tall as the screen allows').toBeGreaterThanOrEqual(Math.min(m.vh * 0.85, 1195, m.vw * 0.7));
     else expect(m.w, 'full width on phones').toBeGreaterThanOrEqual(Math.min(m.vw - 60, 540));
     const order = await page.evaluate(() => [...document.querySelectorAll('main > section, main > div > section, body section[id]')].map((s) => s.id).filter(Boolean));
