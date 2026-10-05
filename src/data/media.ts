@@ -3,13 +3,14 @@
 import type { ImageMetadata } from 'astro';
 
 type Glob = Record<string, { default: ImageMetadata }>;
-const photos = import.meta.glob<{ default: ImageMetadata }>('/assets/Photos/*.jpg', { eager: true }) as Glob;
+// Names with spaces are owner-supplied originals; the site uses their clean-named copies in src/assets/derived.
+const photos = import.meta.glob<{ default: ImageMetadata }>(['/assets/Photos/*.jpg', '!/assets/Photos/* *.jpg'], { eager: true }) as Glob;
 const plans = import.meta.glob<{ default: ImageMetadata }>('/src/assets/derived/plans/*.png', { eager: true }) as Glob;
 const listing = import.meta.glob<{ default: ImageMetadata }>('/assets-listing/*.jpg', { eager: true }) as Glob;
 const derived = import.meta.glob<{ default: ImageMetadata }>('/src/assets/derived/*.jpg', { eager: true }) as Glob;
 const ownerShots = import.meta.glob<{ default: ImageMetadata }>('/src/assets/derived/owner/*.jpg', { eager: true }) as Glob;
 
-export type MediaSource = 'photographer' | 'drone' | 'film-still' | 'listing-owner' | 'owner' | 'floor-plan';
+export type MediaSource = 'photographer' | 'drone' | 'film-still' | 'listing-owner' | 'owner' | 'floor-plan' | 'agent';
 
 export interface MediaItem {
   id: string;
@@ -117,8 +118,8 @@ export const media = {
   lanaiCovered: photo('C04A4663.jpg', 'Covered garden-level lanai with wicker seating looking onto lawn and tropical planting', {
     caption: 'Covered lanai, garden level', focus: '50% 55%',
   }),
-  lanaiFurnished: photo('C04A4985.jpg', 'Furnished upper wraparound lanai with wicker seating and grill overlooking the garden', {
-    caption: 'The upper wraparound lanai', focus: '50% 50%',
+  lanaiFurnished: still('lanai-wraparound.jpg', 'Furnished upper wraparound lanai with wicker seating and grill overlooking the garden', {
+    caption: 'The upper wraparound lanai', focus: '64% 50%', file: 'assets/Photos/lanai second floor new photo.jpg', source: 'photographer',
   }),
   lanaiRockers: photo('C04A4975.jpg', 'Rocking chairs on the upper wraparound lanai above the palms', {
     caption: 'Morning coffee on the wraparound lanai', focus: '50% 50%',
@@ -190,6 +191,8 @@ export const media = {
   sunsetHouse: owner('listing-sunset-house.jpg', 'The house beneath a pink and violet sky at dusk, with hibiscus in the foreground', { caption: 'Dusk over the house', focus: '56% 45%' }),
   sunsetYard: owner('listing-sunset-yard.jpg', 'Sunset clouds and a crescent moon over the lawn, palms and red ti', { caption: 'Sunset over the garden', focus: '50% 40%' }),
   nightSky: owner('listing-night-sky.jpg', 'The Milky Way above the illuminated house at night', { caption: 'The Milky Way above the house', focus: '50% 35%' }),
+
+  agentPortrait: still('agent-misti.jpg', 'Misti R. Tyrin, listing agent', { focus: '62% 30%', file: 'assets/misti pic.avif', source: 'agent' }),
 } satisfies Record<string, MediaItem>;
 
 export const floorPlans = {
@@ -222,6 +225,7 @@ export const galleryCount = galleryChapters.reduce((n, c) => n + c.items.length,
 // Paid assets intentionally left out of the editorial set (still in assets/ and listed in docs/MEDIA_INVENTORY.md).
 export const excludedFromSite = [
   { file: 'assets/Photos/C04A4610.jpg', reason: 'Driveway frame dominated by bare ground; weaker duplicate of the approach' },
+  { file: 'assets/Photos/C04A4985.jpg', reason: 'Replaced by the owners’ retouch with a healthier plant (assets/Photos/lanai second floor new photo.jpg)' },
   { file: 'assets/Photos/DJI_20261001133935_0660_D.jpg', reason: 'Roof fills the foreground; the house reads better in the other aerials' },
   { file: 'assets/Photos/Fruit and ocean photos/IMG_4741.jpeg', reason: 'EXIF GPS places it on Oʻahu’s North Shore (2021), so it cannot represent Kaloli Point' },
 ];

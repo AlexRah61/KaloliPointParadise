@@ -36,7 +36,7 @@ export function initHeader(): void {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') setOpen(false);
   });
-  window.matchMedia('(min-width: 1100px)').addEventListener('change', (m) => {
+  window.matchMedia('(min-width: 1280px)').addEventListener('change', (m) => {
     if (m.matches) setOpen(false, false);
   });
 }

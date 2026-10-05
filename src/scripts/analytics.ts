@@ -111,7 +111,7 @@ export function initAnalytics(): void {
     const href = el.getAttribute('href') ?? '';
     track(name as AnalyticsEvent, {
       cta_location: el.dataset.trackLocation,
-      contact_method: href.startsWith('tel:') ? 'phone' : href.startsWith('mailto:') ? 'email' : undefined,
+      contact_method: href.startsWith('tel:') ? 'phone' : href.startsWith('mailto:') ? 'email' : /^https?:/.test(href) ? 'website' : undefined,
     });
   });
 }

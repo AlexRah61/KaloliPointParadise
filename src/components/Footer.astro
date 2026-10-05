@@ -1,27 +1,51 @@
 ---
+import { ArrowUpRight } from '@lucide/astro';
 import { property } from '../data/property';
+import { media } from '../data/media';
 import Octagon from './Octagon.astro';
+import Photo from './Photo.astro';
 const year = new Date().getFullYear();
 const a = property.agent;
 ---
 
 <footer class="site-footer on-dark">
   <div class="container">
+    <div class="agent-card">
+      <div class="agent-photo">
+        <Photo item={media.agentPortrait} sizes="(min-width: 700px) 216px, 144px" />
+      </div>
+      <div class="agent-body">
+        <h2 class="col-title">Listing agent</h2>
+        <p class="agent-name">{a.name}</p>
+        <p class="agent-role">{a.title} · {a.brokerage}</p>
+        <dl class="agent-contacts">
+          <div>
+            <dt>Phone</dt>
+            <dd><a href={a.phoneHref} data-track="agent_contact_click" data-track-location="footer">{a.phone}</a></dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd><a href={`mailto:${a.email}`} data-track="agent_contact_click" data-track-location="footer">{a.email}</a></dd>
+          </div>
+          <div>
+            <dt>License</dt>
+            <dd>{a.license}</dd>
+          </div>
+        </dl>
+        <a class="btn btn--ghost-light agent-site" href={a.website} target="_blank" rel="noopener" data-track="agent_contact_click" data-track-location="footer">
+          <span>Visit {a.firstName}’s website</span>
+          <ArrowUpRight aria-hidden="true" />
+          <span class="visually-hidden">(opens in a new tab)</span>
+        </a>
+      </div>
+    </div>
+
     <div class="top">
       <div class="identity">
         <Octagon class="mark" />
         <p class="addr">{property.address.streetDisplay}</p>
         <p class="city">{property.address.city}, {property.address.state} {property.address.zip}</p>
         <p class="meta">Offered at {property.priceDisplay} · MLS® {property.mls}</p>
-      </div>
-
-      <div class="col">
-        <h2 class="col-title">Listing agent</h2>
-        <p class="strong">{a.name}</p>
-        <p>{a.title}, {a.brokerage}</p>
-        <p>License {a.license}</p>
-        <p><a href={a.phoneHref} data-track="agent_contact_click" data-track-location="footer">{a.phone}</a></p>
-        <p><a href={`mailto:${a.email}`} data-track="agent_contact_click" data-track-location="footer">{a.email}</a></p>
       </div>
 
       <div class="col">
@@ -64,7 +88,35 @@ const a = property.agent;
     border-bottom: 1px solid color-mix(in srgb, var(--ivory) 12%, transparent);
   }
   @media (min-width: 700px) { .top { grid-template-columns: 1fr 1fr; } }
-  @media (min-width: 1100px) { .top { grid-template-columns: 1.3fr 1fr 1fr auto; } }
+  @media (min-width: 1100px) { .top { grid-template-columns: 1.3fr 1fr auto; } }
+
+  /* The listing agent, introduced the way her own site does: portrait, name, then the direct lines. */
+  .agent-card {
+    display: grid;
+    gap: 1.75rem;
+    justify-items: start;
+    padding-bottom: clamp(2.5rem, 5vw, 4rem);
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+    border-bottom: 1px solid color-mix(in srgb, var(--ivory) 12%, transparent);
+  }
+  @media (min-width: 700px) {
+    .agent-card { grid-template-columns: 13.5rem minmax(0, 1fr); column-gap: clamp(2rem, 4vw, 3.5rem); align-items: center; }
+  }
+  .agent-photo { width: 9rem; aspect-ratio: 4 / 5; overflow: hidden; background: var(--charcoal); }
+  @media (min-width: 700px) { .agent-photo { width: 100%; } }
+  .agent-photo :global(picture), .agent-photo :global(img) { width: 100%; height: 100%; }
+  .agent-photo :global(img) { object-fit: cover; }
+  .agent-name { font-family: var(--font-serif); font-size: var(--step-3); line-height: 1.05; color: var(--ivory); }
+  .agent-role { margin-top: 0.45rem; color: var(--stone); }
+  .agent-contacts { display: flex; flex-wrap: wrap; gap: 1rem clamp(1.75rem, 4vw, 3.5rem); margin-top: 1.5rem; }
+  .agent-contacts dt { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bronze-light); }
+  .agent-contacts dd { margin: 0.3rem 0 0; font-size: var(--step-0); color: var(--ivory); }
+  .agent-contacts a { text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 3px; }
+  .agent-contacts a:hover { color: var(--white); text-decoration-color: currentColor; }
+  .agent-site { margin-top: 1.75rem; }
+  @media (max-width: 399px) {
+    .agent-site { padding-inline: 1.1rem; letter-spacing: 0.12em; }
+  }
   .identity :global(.mark) { width: 40px; height: 40px; color: var(--bronze-light); margin-bottom: 1.25rem; }
   .addr { font-family: var(--font-serif); font-size: var(--step-2); color: var(--ivory); line-height: 1.1; }
   .city { color: var(--stone); }

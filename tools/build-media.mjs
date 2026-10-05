@@ -289,6 +289,19 @@ if (force || !existsSync(HERO_PHONE)) {
   console.log(`  ✓ hero-phone.jpg ${side}x${side}`);
 }
 
+// Files supplied with spaces in their names get clean-named copies (spaces would break srcset URLs).
+const SUPPLIED = [
+  // The owners' retouch of C04A4985: a healthy plant by the door.
+  { src: join(ROOT, 'assets', 'Photos', 'lanai second floor new photo.jpg'), out: 'lanai-wraparound.jpg' },
+  { src: join(ROOT, 'assets', 'misti pic.avif'), out: 'agent-misti.jpg' },
+];
+for (const s of SUPPLIED) {
+  const out = join(STILLS_DIR, s.out);
+  if (!existsSync(s.src) || (!force && existsSync(out))) continue;
+  const info = await sharp(s.src).rotate().jpeg({ quality: 92, mozjpeg: true }).toFile(out);
+  console.log(`  ✓ ${s.out} ${info.width}x${info.height}`);
+}
+
 // Hard guard for the Workers static-asset limit.
 const tooBig = [];
 const walk = (d) => readdirSync(d).forEach((f) => {

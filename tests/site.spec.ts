@@ -535,6 +535,65 @@ test.describe('page', () => {
     expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'agent', contact_method: 'phone' }]);
   });
 
+  test('the header shows the listing agent’s number beside the section links', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const { width: vw, height: vh } = page.viewportSize()!;
+    const call = page.locator('[data-header] .header-call');
+    if (vw < 360 || (vw < 640 && vh <= 500)) {
+      // No room beside the brand and the menu: the menu carries the number.
+      await expect(call).toBeHidden();
+      await page.locator('[data-menu-toggle]').click();
+      await expect(page.locator('#mobile-nav a[href="tel:+18087568811"]')).toBeVisible();
+      return;
+    }
+    await expect(call).toBeVisible();
+    await expect(call).toHaveAttribute('href', 'tel:+18087568811');
+    await expect(call).toHaveAccessibleName(/Contact agent.*\(808\) 756-8811/);
+    const numberWidth = await call.locator('.call-number').evaluate((el) => el.getBoundingClientRect().width);
+    if (vw >= 768) expect(numberWidth, 'the number itself is readable').toBeGreaterThan(60);
+    const nav = page.locator('[data-header] .nav-desktop');
+    if (await nav.isVisible()) {
+      const link = (await nav.getByRole('link', { name: 'Kaloli Point' }).boundingBox())!;
+      const box = (await call.boundingBox())!;
+      expect(box.x, 'right after Kaloli Point').toBeGreaterThan(link.x + link.width);
+      expect(Math.abs(box.y + box.height / 2 - (link.y + link.height / 2)), 'on the same line').toBeLessThan(6);
+    }
+    const fits = await page.evaluate(() => {
+      const bar = document.querySelector('[data-header] .bar')!.getBoundingClientRect();
+      const boxes = ['.brand', '.nav-desktop', '.header-call', '.header-cta', '.menu-toggle']
+        .map((s) => document.querySelector(`[data-header] ${s}`))
+        .filter((el): el is Element => !!el && getComputedStyle(el).display !== 'none')
+        .map((el) => el.getBoundingClientRect());
+      const links = [...document.querySelectorAll('[data-header] .nav-desktop a')].map((a) => a.getBoundingClientRect());
+      return boxes.every((r, i) => (i === 0 || r.left >= boxes[i - 1]!.right) && r.right <= bar.right + 1) && links.every((r) => r.height < 40);
+    });
+    expect(fits, 'one line, nothing overlapping').toBe(true);
+    await page.evaluate(() => document.addEventListener('click', (e) => (e.target as Element).closest('a[href^="tel:"]') && e.preventDefault(), true));
+    await call.click();
+    expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'header', contact_method: 'phone' }]);
+  });
+
+  test('the footer introduces the listing agent with her portrait, direct lines and website', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const card = page.locator('.site-footer .agent-card');
+    await card.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    const img = card.locator('img');
+    await expect(img).toHaveAttribute('alt', /Misti R\. Tyrin/);
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
+    await expect(card.getByText('Misti R. Tyrin', { exact: true })).toBeVisible();
+    await expect(card.getByText('Principal Broker & Owner · Iokua Real Estate')).toBeVisible();
+    await expect(card.locator('a[href="tel:+18087568811"]')).toHaveText('(808) 756-8811');
+    await expect(card.locator('a[href="mailto:mrstyrin@gmail.com"]')).toHaveText('mrstyrin@gmail.com');
+    const site = card.getByRole('link', { name: /Visit Misti’s website/ });
+    await expect(site).toHaveAttribute('href', 'https://misti.iokuarealestate.com/');
+    await expect(site).toHaveAttribute('target', '_blank');
+    await expect(site).toHaveAttribute('rel', /noopener/);
+    await page.evaluate(() => document.addEventListener('click', (e) => (e.target as Element).closest('a[target="_blank"]') && e.preventDefault(), true));
+    await site.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await site.click();
+    expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'footer', contact_method: 'website' }]);
+  });
+
   test('Watch the film brings the whole player, controls included, into view', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(500);
@@ -585,6 +644,7 @@ test.describe('page', () => {
       await views.nth(i).scrollIntoViewIfNeeded();
       await expect.poll(() => views.nth(i).locator('img').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     }
+    expect(await views.nth(1).locator('img').evaluate((img: HTMLImageElement) => img.currentSrc), 'the owners’ retouched wraparound photo').toContain('lanai-wraparound');
   });
 
   test('light to night ends on the Milky Way, uncropped, large and never under text', { tag: '@phone' }, async ({ page }) => {

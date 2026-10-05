@@ -125,6 +125,7 @@ export const property = {
     phone: '(808) 756-8811',
     phoneHref: 'tel:+18087568811',
     email: 'mrstyrin@gmail.com',
+    website: 'https://misti.iokuarealestate.com/',
     brokerageAddress: '234 Waianuenue Ave, Suite 219, Hilo, HI 96720',
     brokeragePhone: '(808) 934-7050',
     brokeragePhoneHref: 'tel:+18089347050',
