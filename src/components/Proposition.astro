@@ -1,6 +1,4 @@
 ---
-import Zoomable from './Zoomable.astro';
-import { media } from '../data/media';
 import { property } from '../data/property';
 
 const f = property.facts;
@@ -16,45 +14,27 @@ const facts = [
 ---
 
 <section class="section proposition" id="residence" aria-labelledby="residence-title">
-  <div class="container grid-12 prop-grid">
-    <div class="prop-text">
-      <h2 class="eyebrow" id="residence-title" data-reveal>The residence</h2>
-      <p class="statement" data-reveal>
-        A distinctive <em>octagonal</em> home on three levels, with three lanais, set in a private tropical half acre at
-        {property.address.neighborhood} — and extensively renovated in {f.renovated}.
-      </p>
-      <dl class="facts-line" data-reveal>
-        {facts.map((it) => (
-          <div class="fact">
-            <dt>{it.label}</dt>
-            <dd>{it.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-    <Zoomable
-      item={media.residenceFront}
-      gallery="residence"
-      class="prop-figure"
-      frameClass="ar-4x5"
-      sizes="(min-width: 1000px) 38vw, 92vw"
-      data-reveal-image
-    />
+  <div class="container">
+    <h2 class="eyebrow" id="residence-title" data-reveal>The residence</h2>
+    <p class="statement" data-reveal>
+      A distinctive <em>octagonal</em> home on three levels, with three lanais, set in a private tropical half acre at
+      {property.address.neighborhood} — and extensively renovated in {f.renovated}.
+    </p>
+    <dl class="facts-line" data-reveal>
+      {facts.map((it) => (
+        <div class="fact">
+          <dt>{it.label}</dt>
+          <dd>{it.value}</dd>
+        </div>
+      ))}
+    </dl>
   </div>
 </section>
 
 <style>
   .proposition { padding-bottom: clamp(3rem, 6vw, 5rem); }
-  .prop-grid { row-gap: clamp(2.5rem, 5vw, 3.5rem); align-items: end; }
-  .prop-text { grid-column: 1 / -1; }
-  .prop-figure { grid-column: 1 / -1; }
-  @media (min-width: 1000px) {
-    .prop-text { grid-column: 1 / span 7; padding-bottom: 0.25rem; }
-    .prop-figure { grid-column: 9 / -1; }
-  }
   .statement {
     margin-top: clamp(1.5rem, 3vw, 2.25rem);
-    max-width: 22ch;
     font-family: var(--font-serif);
     font-weight: 400;
     font-size: clamp(2.1rem, 1.3rem + 2.9vw, 4rem);

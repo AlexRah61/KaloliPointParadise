@@ -500,11 +500,19 @@ test.describe('page', () => {
     expect(await events(page)).toContain('gallery_open');
   });
 
-  test('the residence opens on the front of the house', { tag: '@phone' }, async ({ page }) => {
+  test('the residence spans the page and leaves the front of the house to the carousel', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
-    const figure = page.locator('#residence figure');
-    await expect(figure.locator('figcaption')).toHaveText('Three stacked levels, three lanais');
-    await expect(figure.locator('a')).toHaveAttribute('data-pswp-src', /DJI_20261001133743_0632_D/);
+    const residence = page.locator('#residence');
+    await expect(residence.locator('img, figure'), 'no repeat of the carousel’s first photograph').toHaveCount(0);
+    await expect(page.locator('[data-carousel] .slide').first().locator('a')).toHaveAttribute('data-pswp-src', /DJI_20261001133743_0632_D/);
+    const span = await residence.evaluate((s) => {
+      const box = s.querySelector('.container')!;
+      const cs = getComputedStyle(box);
+      const inner = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      return { facts: s.querySelector('.facts-line')!.getBoundingClientRect().width / inner, statement: s.querySelector('.statement')!.getBoundingClientRect().width / inner };
+    });
+    expect(span.facts, 'facts run the full width').toBeGreaterThan(0.99);
+    expect(span.statement, 'the statement runs the full width').toBeGreaterThan(0.99);
   });
 
   test('all 45 photographs open in one collection, with the viewer inside it', { tag: '@phone' }, async ({ page }) => {

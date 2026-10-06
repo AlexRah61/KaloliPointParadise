@@ -84,10 +84,6 @@ export const media = {
   architectureAerial: photo('DJI_20261001133625_0617_D.jpg', 'Elevated view of the octagonal three-level home with stacked lanais, red ti and tall pines', {
     caption: 'Three stacked levels, three lanais', focus: '47% 45%',
   }),
-  // The hero's drone frame, captioned for the residence introduction (cropped 4:5 to the house).
-  residenceFront: photo('DJI_20261001133743_0632_D.jpg', 'Front of the octagonal three-level home, a lanai on every level, above lava-rock planters and a lawn framed by palms and red ti', {
-    caption: 'Three stacked levels, three lanais', focus: '50% 50%',
-  }),
   frontElevation: photo('C04A4635.jpg', 'Front elevation of the octagonal three-level home: a covered lanai at garden level, the wraparound lanai above it and the top-floor lanai', {
     caption: 'Three lanais, one on every level', focus: '48% 40%',
   }),
