@@ -13,7 +13,10 @@ const VIEWS = [
   { label: 'Lot', note: 'From above', src: embed(18, true), satellite: true },
 ];
 const START = 1;
-const directions = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+// Google has no address point for 15-1077 (as text it resolves to 15 Amau Rd in Hilo), so the address is only a
+// label on a waypoint fixed to the house's coordinates; the origin is the visitor's location.
+const DESTINATION = '15-1077 Ama U Rd, Keaau, HI 96749';
+const directions = `https://www.google.com/maps/dir//${DESTINATION.replaceAll(' ', '+')}/data=!4m9!4m8!1m1!4e1!1m5!1m1!1s0x0:0x0!2m2!1d${lng}!2d${lat}`;
 const PUNA = 'https://iokuarealestate.com/neighborhoods/puna';
 ---
 

@@ -612,7 +612,10 @@ test.describe('page', () => {
       await expect(map).toHaveAttribute('src', src);
     }
     await expect(section.getByRole('link', { name: /Explore Puna district/ })).toHaveAttribute('href', 'https://iokuarealestate.com/neighborhoods/puna');
-    await expect(section.getByRole('link', { name: /Get directions/ })).toHaveAttribute('href', /maps\/dir\/\?api=1&destination=19\.61513,-154\.95389$/);
+    await expect(section.getByRole('link', { name: /Get directions/ })).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/dir//15-1077+Ama+U+Rd,+Keaau,+HI+96749/data=!4m9!4m8!1m1!4e1!1m5!1m1!1s0x0:0x0!2m2!1d-154.95389!2d19.61513',
+    );
   });
 
   test('Watch the film brings the whole player, controls included, into view', { tag: '@phone' }, async ({ page }) => {
