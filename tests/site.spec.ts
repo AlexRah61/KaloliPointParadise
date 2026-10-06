@@ -370,16 +370,29 @@ test.describe('page', () => {
     }
   });
 
-  test('the gallery follows the residence and comes before the architecture', { tag: '@phone' }, async ({ page }) => {
+  test('the gallery follows the residence, and the film follows the gallery before the architecture', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const order = await page.evaluate(() => [...document.querySelectorAll('#residence, #gallery, #levels, #lanais, #film, #location')].map((s) => s.id));
-    expect(order).toEqual(['residence', 'gallery', 'levels', 'lanais', 'film', 'location']);
+    expect(order).toEqual(['residence', 'gallery', 'film', 'levels', 'lanais', 'location']);
     expect(await page.evaluate(() => document.getElementById('residence')!.nextElementSibling?.id)).toBe('gallery');
-    expect(await page.evaluate(() => document.getElementById('gallery')!.nextElementSibling?.id)).toBe('levels');
+    expect(await page.evaluate(() => !!document.getElementById('gallery')!.nextElementSibling?.querySelector('#film'))).toBe(true);
+    expect(await page.evaluate(() => document.getElementById('film')!.closest('section')!.nextElementSibling?.id)).toBe('levels');
     await expect(page.locator('#gallery-title'), 'the gallery is introduced by its label alone').toHaveText('Gallery');
   });
 
-  test('the carousel holds every photograph, the agent’s thirty first, and moves by thumbnail, arrow, key and swipe', { tag: '@phone' }, async ({ page, browserName, hasTouch }) => {
+  test('property specifications are shown by default and can be collapsed and expanded', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const specs = page.locator('#levels details.specs');
+    await expect(specs).toHaveAttribute('open', '');
+    await specs.scrollIntoViewIfNeeded();
+    await expect(specs.locator('.spec-list')).toBeVisible();
+    await specs.locator('summary').click();
+    await expect(specs.locator('.spec-list')).toBeHidden();
+    await specs.locator('summary').click();
+    await expect(specs.locator('.spec-list')).toBeVisible();
+  });
+
+  test('the carousel holds every photograph in the owners’ order, and moves by thumbnail, arrow, key and swipe', { tag: '@phone' }, async ({ page, browserName, hasTouch }) => {
     await page.goto('/');
     await expect(page.locator('[data-open-all]')).toHaveText('View all photographs');
     const files = (sel: string) =>
@@ -390,10 +403,10 @@ test.describe('page', () => {
     expect([...order].sort(), 'every photograph, once').toEqual([...album].sort());
     expect(album, 'the low-quality ocean film still is gone').not.toContain('film-ocean-aerial');
     expect(order.slice(0, 3), 'in the agent’s order').toEqual(['DJI_20261001133743_0632_D', 'C04A4658', 'C04A4729']);
-    expect(order[29]).toBe('listing-night-sky');
-    const rest = order.slice(30, -1);
+    expect(order.slice(19, 22), 'the stair follows the primary desk').toEqual(['C04A4821', 'film-stair-light', 'C04A4975']);
+    expect(order.slice(28, 32), 'the night sky follows the front elevation').toEqual(['listing-sunset-yard', 'listing-sunset-house', 'C04A4635', 'listing-night-sky']);
+    const rest = order.slice(32);
     expect(rest, 'then the others in album order').toEqual(album.filter((f) => rest.includes(f)));
-    expect(order.at(-1), 'the stair still closes the carousel').toBe('film-stair-light');
 
     const carousel = page.locator('[data-carousel]');
     const stage = carousel.locator('[data-carousel-stage]');

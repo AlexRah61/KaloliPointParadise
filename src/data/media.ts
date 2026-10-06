@@ -229,19 +229,19 @@ export const galleryChapters: GalleryChapter[] = [
 
 export const galleryCount = galleryChapters.reduce((n, c) => n + c.items.length, 0);
 
-// The listing agent's carousel order (iokuarealestate.com, MLS 733498); the rest of the collection follows in its own order,
-// and the stair still closes the carousel.
+// The listing agent's carousel order (iokuarealestate.com, MLS 733498) with the owners' changes: the stair follows the
+// primary desk and the night sky follows the front elevation. The rest of the collection follows in its own order.
 const agentCarousel: MediaItem[] = [
   media.heroAerial, media.entry, media.gardenLiving, media.gardenLiving2, media.gardenBath, media.flexRoom,
   media.lanaiCovered, media.kitchenWide, media.kitchenSink, media.kitchenDetail, media.kitchenIsland, media.kitchenHall,
   media.familyRoom, media.familyMedia, media.lanaiFurnished, media.primaryBedroom, media.primaryShower, media.primaryBath,
-  media.primaryVanity, media.primaryDesk, media.lanaiRockers, media.groundsWall, media.groundsLawn, media.groundsGarden,
-  media.architectureAerial, media.contextInland, media.contextOcean, media.sunsetYard, media.sunsetHouse, media.nightSky,
+  media.primaryVanity, media.primaryDesk, media.stairLight, media.lanaiRockers, media.groundsWall, media.groundsLawn,
+  media.groundsGarden, media.architectureAerial, media.contextInland, media.contextOcean, media.sunsetYard, media.sunsetHouse,
+  media.frontElevation, media.nightSky,
 ];
 export const carouselPhotos: MediaItem[] = [
   ...agentCarousel,
-  ...galleryChapters.flatMap((c) => c.items).filter((m) => !agentCarousel.includes(m) && m !== media.stairLight),
-  media.stairLight,
+  ...galleryChapters.flatMap((c) => c.items).filter((m) => !agentCarousel.includes(m)),
 ];
 
 // Paid assets intentionally left out of the editorial set (still in assets/ and listed in docs/MEDIA_INVENTORY.md).

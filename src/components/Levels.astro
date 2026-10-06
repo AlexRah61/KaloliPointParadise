@@ -95,7 +95,7 @@ const allPlans = await lightbox(floorPlans.allDim);
       <Expand aria-hidden="true" /> All three floor plans, with dimensions
     </a>
 
-    <details class="drawer specs">
+    <details class="drawer specs" open>
       <summary>Property specifications <ChevronDown aria-hidden="true" /></summary>
       <dl class="spec-list">
         {property.details.map((d) => (

@@ -124,7 +124,7 @@ function stageSizes({ src }: MediaItem): string {
 </section>
 
 <style>
-  .gallery { background: var(--ink); color: var(--stone); }
+  .gallery { background: var(--ink); color: var(--stone); padding-bottom: clamp(3rem, 6vw, 5rem); }
   .gallery-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2rem; margin-bottom: clamp(2rem, 4vw, 3.25rem); }
   .open-all :global(svg) { width: 1rem; height: 1rem; }
   /* 320px screens: the label fits inside the gutters instead of widening the page. */
