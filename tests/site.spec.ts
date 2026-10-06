@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
 
@@ -6,6 +6,42 @@ type KpWindow = Window & { __kpEvents?: { event: string; params: Record<string, 
 const events = (page: Page) => page.evaluate(() => ((window as KpWindow).__kpEvents ?? []).map((e) => e.event));
 const tracked = (page: Page, name: string) =>
   page.evaluate((n) => ((window as KpWindow).__kpEvents ?? []).filter((e) => e.event === n).map((e) => e.params), name);
+
+// A right-to-left swipe across the target: real touch where the browser lets tests synthesise it, a trackpad
+// swipe on desktops, and on mobile WebKit (no synthetic touch) the scroll the swipe would make.
+async function swipe(page: Page, target: Locator, browserName: string, hasTouch: boolean): Promise<void> {
+  const box = (await target.boundingBox())!;
+  // The fixed header covers the top of the viewport; aim at the part of the target visitors can see.
+  const header = await page.locator('[data-header]').boundingBox();
+  const top = Math.max(box.y, header ? header.y + header.height : 0);
+  const bottom = Math.min(box.y + box.height, page.viewportSize()!.height);
+  const x = box.x + box.width / 2;
+  const y = (top + bottom) / 2;
+  if (browserName === 'chromium' && hasTouch) {
+    const cdp = await page.context().newCDPSession(page);
+    const from = box.x + box.width * 0.8;
+    const to = box.x + box.width * 0.2;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from, y }] });
+    for (let k = 1; k <= 10; k++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + ((to - from) * k) / 10, y }] });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+  } else if (!hasTouch) {
+    await page.mouse.move(x, y);
+    await page.mouse.wheel(box.width * 0.6, 0);
+  } else {
+    const track = target.locator('[data-carousel-track]');
+    await track.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+    await track.evaluate((el) => el.scrollBy({ left: el.clientWidth * 0.6 }));
+  }
+}
+
+// Waits until the carousel track rests on photo i (zero-based).
+const settled = (track: Locator, i: number) =>
+  expect
+    .poll(() => track.evaluate((el) => el.scrollLeft / el.firstElementChild!.getBoundingClientRect().width))
+    .toBeCloseTo(i, 1);
 
 test.describe('page', () => {
   test('loads cleanly with complete SEO metadata', { tag: '@phone' }, async ({ page }) => {
@@ -63,7 +99,7 @@ test.describe('page', () => {
     const hero = page.locator('[data-hero]');
     await expect(hero).toContainText('$679,000');
     await expect(hero).toContainText('2 Bed · 3 Bath · 1,968 SF · 0.50 Acre');
-    await expect(hero).toContainText('Paradise on Hawaiʻi Island');
+    await expect(hero.getByRole('heading', { level: 1 })).toHaveAccessibleName('Island Living at Kaloli Point');
     await expect(hero.getByRole('link', { name: /request private showing/i })).toBeVisible();
     await expect(hero.getByRole('link', { name: /explore the residence/i })).toBeVisible();
     await expect(hero.getByRole('link', { name: /watch the film/i })).toBeAttached();
@@ -273,7 +309,7 @@ test.describe('page', () => {
     await page.evaluate(() => window.scrollTo(0, document.getElementById('gallery')!.offsetTop));
     await expect.poll(shown).toBe(true);
 
-    await page.locator('a[data-gallery="curated"]').first().click();
+    await page.locator('[data-carousel] .slide:not([inert]) a').click();
     await expect(page.locator('.pswp')).toBeVisible();
     await page.waitForTimeout(500);
     expect(await atBar(), 'gallery viewer and its controls sit above the bar').toBe('gallery');
@@ -311,15 +347,17 @@ test.describe('page', () => {
   test('navigation reaches every chapter', { tag: '@phone' }, async ({ page, isMobile }) => {
     await page.goto('/');
     const header = page.locator('[data-header]');
-    for (const [label, id] of [['Three levels', 'levels'], ['Film & gallery', 'film'], ['Kaloli Point', 'location']] as const) {
+    for (const [label, id] of [['Gallery', 'gallery'], ['Three levels', 'levels'], ['Film', 'film'], ['Kaloli Point', 'location']] as const) {
+      // Menu links read "02Gallery": match the label at the end, so "Film" cannot match another link.
+      const name = new RegExp(`${label}$`);
       const toggle = header.locator('[data-menu-toggle]');
       if (await toggle.isVisible()) {
         await toggle.click();
         await expect(page.locator('#mobile-nav')).toBeVisible();
-        await page.locator('#mobile-nav').getByRole('link', { name: label }).click();
+        await page.locator('#mobile-nav').getByRole('link', { name }).click();
         await expect(page.locator('#mobile-nav')).toBeHidden();
       } else {
-        await header.locator('.nav-desktop').getByRole('link', { name: label }).click();
+        await header.locator('.nav-desktop').getByRole('link', { name }).click();
       }
       await expect(page.locator(`#${id} h2`).first()).toBeInViewport({ timeout: 8000 });
     }
@@ -332,27 +370,126 @@ test.describe('page', () => {
     }
   });
 
-  test('gallery opens full screen, navigates by keyboard and closes', { tag: '@phone' }, async ({ page }) => {
+  test('the gallery follows the residence and comes before the architecture', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
-    const tile = page.locator('a[data-gallery="curated"]').first();
-    const total = await page.locator('a[data-gallery="curated"]').count();
-    expect(total, 'an edited landing-page gallery').toBeGreaterThanOrEqual(8);
-    expect(total).toBeLessThanOrEqual(12);
-    await tile.scrollIntoViewIfNeeded();
-    await tile.click();
+    const order = await page.evaluate(() => [...document.querySelectorAll('#residence, #gallery, #levels, #lanais, #film, #location')].map((s) => s.id));
+    expect(order).toEqual(['residence', 'gallery', 'levels', 'lanais', 'film', 'location']);
+    expect(await page.evaluate(() => document.getElementById('residence')!.nextElementSibling?.id)).toBe('gallery');
+    expect(await page.evaluate(() => document.getElementById('gallery')!.nextElementSibling?.id)).toBe('levels');
+    await expect(page.locator('#gallery-title'), 'the gallery is introduced by its label alone').toHaveText('Gallery');
+  });
+
+  test('the carousel holds every photograph, the agent’s thirty first, and moves by thumbnail, arrow, key and swipe', { tag: '@phone' }, async ({ page, browserName, hasTouch }) => {
+    await page.goto('/');
+    await expect(page.locator('[data-open-all]')).toHaveText('View all photographs');
+    const files = (sel: string) =>
+      page.locator(sel).evaluateAll((as) => as.map((a) => (a as HTMLElement).dataset.pswpSrc!.split('/').pop()!.split('.')[0]!));
+    const order = await files('[data-carousel] a[data-gallery="carousel"]');
+    const album = await files('a[data-gallery="all"]');
+    expect(order).toHaveLength(46);
+    expect([...order].sort(), 'every photograph, once').toEqual([...album].sort());
+    expect(order.slice(0, 3), 'in the agent’s order').toEqual(['DJI_20261001133743_0632_D', 'C04A4658', 'C04A4729']);
+    expect(order[29]).toBe('listing-night-sky');
+    const rest = order.slice(30);
+    expect(rest, 'then the others in album order').toEqual(album.filter((f) => rest.includes(f)));
+
+    const carousel = page.locator('[data-carousel]');
+    const stage = carousel.locator('[data-carousel-stage]');
+    const track = carousel.locator('[data-carousel-track]');
+    const index = carousel.locator('[data-carousel-index]');
+    await stage.scrollIntoViewIfNeeded();
+    await carousel.locator('[data-carousel-thumb="3"]').click();
+    await expect(index).toHaveText('04');
+    await expect(carousel.locator('[data-carousel-toggle]'), 'choosing a photo stops the slideshow').toHaveAttribute('aria-pressed', 'true');
+    await expect(carousel.locator('.slide:not([inert])')).toHaveAttribute('aria-label', '4 of 46');
+    await carousel.locator('[data-carousel-next]').click();
+    await expect(index).toHaveText('05');
+    await carousel.locator('[data-carousel-prev]').click();
+    await expect(index).toHaveText('04');
+    await carousel.locator('[data-carousel-next]').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(index).toHaveText('05');
+    await settled(track, 4);
+    await swipe(page, stage, browserName, hasTouch);
+    await expect(index).toHaveText('06');
+    await expect(carousel.locator('[data-carousel-thumb="5"]')).toHaveAttribute('aria-current', 'true');
+    await expect(carousel.locator('[data-carousel-caption]')).not.toHaveText('');
+  });
+
+  test('the carousel plays every four seconds until the visitor takes over', { tag: '@phone' }, async ({ page, browserName, hasTouch }) => {
+    await page.clock.install();
+    await page.goto('/');
+    const carousel = page.locator('[data-carousel]');
+    const stage = carousel.locator('[data-carousel-stage]');
+    const index = carousel.locator('[data-carousel-index]');
+    const toggle = carousel.locator('[data-carousel-toggle]');
+    await stage.scrollIntoViewIfNeeded();
+    await expect(stage).toBeInViewport({ ratio: 0.5 });
+    await expect(index).toHaveText('01');
+    await page.clock.runFor(4100);
+    await expect(index).toHaveText('02');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await page.clock.runFor(8200);
+    await expect(index, 'paused').toHaveText('02');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await page.clock.runFor(4100);
+    await expect(index).toHaveText('03');
+    await settled(carousel.locator('[data-carousel-track]'), 2);
+    await swipe(page, stage, browserName, hasTouch);
+    await expect(index, 'a swipe moves one photo').toHaveText('04');
+    await expect(toggle, 'and stops the slideshow for good').toHaveAttribute('aria-pressed', 'true');
+    await page.clock.runFor(8200);
+    await expect(index).toHaveText('04');
+  });
+
+  test('a photo opens full size with the same counter, thumbnails, arrows and swipe, and the carousel waits where the visitor left off', { tag: '@phone' }, async ({ page, browserName, hasTouch }) => {
+    await page.goto('/');
+    const carousel = page.locator('[data-carousel]');
+    const index = carousel.locator('[data-carousel-index]');
+    await carousel.locator('[data-carousel-stage]').scrollIntoViewIfNeeded();
+    await carousel.locator('[data-carousel-thumb="4"]').click();
+    await expect(index).toHaveText('05');
+    await settled(carousel.locator('[data-carousel-track]'), 4);
+    await carousel.locator('.slide:not([inert]) a').click();
     const pswp = page.locator('.pswp');
     await expect(pswp).toBeVisible();
     await expect(pswp).toHaveAttribute('role', 'dialog');
-    const caption = page.locator('.pswp__kp-caption');
-    await expect(caption).toContainText(`1 / ${total}`);
+    const count = pswp.locator('.kp-count');
+    const thumbs = pswp.locator('.kp-thumbs button');
+    await expect(count).toHaveText('05 / 46');
+    await expect(thumbs).toHaveCount(46);
+    await expect(thumbs.nth(4)).toHaveAttribute('aria-current', 'true');
+    await expect(pswp.locator('.pswp__counter'), 'one counter only').toHaveCount(0);
     await page.waitForTimeout(700);
     await page.keyboard.press('ArrowRight');
-    await expect(caption).toContainText(`2 / ${total}`);
-    const img = page.locator('.pswp__item img.pswp__img').first();
-    await expect(img).toBeVisible();
+    await expect(count).toHaveText('06 / 46');
+    await thumbs.nth(9).click();
+    await expect(count).toHaveText('10 / 46');
+    await expect(thumbs.nth(9)).toHaveAttribute('aria-current', 'true');
+    let last = 10;
+    if (!hasTouch) {
+      await page.mouse.move(20, 200);
+      await pswp.locator('.pswp__button--arrow--next').click();
+      last = 11;
+    } else if (browserName === 'chromium') {
+      await page.waitForTimeout(500);
+      await swipe(page, pswp.locator('.pswp__scroll-wrap'), browserName, hasTouch);
+      last = 11;
+    }
+    await expect(count).toHaveText(`${last} / 46`);
     await page.keyboard.press('Escape');
     await expect(pswp).toHaveCount(0);
+    await expect(index, 'the carousel waits on the last photo viewed').toHaveText(String(last));
     expect(await events(page)).toContain('gallery_open');
+  });
+
+  test('the residence opens on the front of the house', { tag: '@phone' }, async ({ page }) => {
+    await page.goto('/');
+    const figure = page.locator('#residence figure');
+    await expect(figure.locator('figcaption')).toHaveText('Three stacked levels, three lanais');
+    await expect(figure.locator('a')).toHaveAttribute('data-pswp-src', /DJI_20261001133743_0632_D/);
   });
 
   test('all 46 photographs open in one collection, with the viewer inside it', { tag: '@phone' }, async ({ page }) => {
@@ -366,8 +503,11 @@ test.describe('page', () => {
     await expect(page.locator('[data-sticky-cta]')).toHaveAttribute('data-visible', 'false');
     await all.locator('a[data-gallery="all"]').nth(5).click();
     const caption = all.locator('.pswp__kp-caption');
-    await expect(caption).toContainText('6 / 46');
+    await expect(caption).toContainText('06 / 46');
+    await expect(caption.locator('.kp-thumbs button'), 'the same full-size experience as the carousel').toHaveCount(46);
     await page.waitForTimeout(700);
+    await page.keyboard.press('ArrowRight');
+    await expect(caption).toContainText('07 / 46');
     await page.keyboard.press('Escape');
     await expect(all.locator('.pswp')).toHaveCount(0);
     await expect(all).toBeVisible();

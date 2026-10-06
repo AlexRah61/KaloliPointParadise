@@ -45,8 +45,8 @@ export const property = {
   factsLine: '2 Bed · 3 Bath · 1,968 SF · 0.50 Acre',
 
   campaign: {
-    title: 'Kaloli Point',
-    tagline: 'Paradise on Hawaiʻi Island',
+    title: 'Island Living',
+    tagline: 'at Kaloli Point',
     addressLine: '15–1077 Amau Rd · Keaʻau, Hawaiʻi',
   },
 

@@ -266,6 +266,45 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
   .zoomable:hover img { transform: scale(1.025); }
 }
 
+/* Full-screen photo viewer (PhotoSwipe), dressed like the gallery carousel: square arrows, counter and thumbnails. */
+.kp-pswp { --pswp-bg: var(--ink); }
+.kp-pswp .pswp__button.pswp__button--arrow {
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  border: 1px solid color-mix(in srgb, var(--ivory) 55%, transparent);
+  background: color-mix(in srgb, var(--ink) 35%, transparent);
+  opacity: 1;
+  transition: background-color 0.3s var(--ease);
+}
+.kp-pswp .pswp__button--arrow--prev { left: 1.25rem; }
+.kp-pswp .pswp__button--arrow--next { right: 1.25rem; }
+.kp-pswp .pswp__button--arrow .pswp__icn { top: 50%; left: 50%; right: auto; width: 30px; height: 30px; margin: -15px 0 0 -15px; }
+.kp-pswp .pswp__button.pswp__button--arrow:hover { --pswp-icon-color: var(--ink); background: var(--ivory); }
+.kp-pswp .pswp__kp-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 var(--gutter) 0.9rem; }
+.kp-pswp .kp-bar { display: flex; align-items: baseline; justify-content: center; gap: 0.9rem; margin: 0; padding-block: 0.75rem; font-size: var(--step--1); color: var(--sand); }
+.kp-pswp .kp-count { flex: none; font-family: var(--font-serif); font-size: 1.05rem; color: var(--bronze-light); }
+.kp-pswp .kp-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kp-pswp .kp-thumbs { position: relative; display: flex; gap: 0.5rem; overflow-x: auto; padding: 3px; scrollbar-width: none; }
+.kp-pswp .kp-thumbs::-webkit-scrollbar { display: none; }
+.kp-pswp .kp-thumbs button {
+  flex: none;
+  width: 112px;
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: 0;
+  background: var(--charcoal);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.3s var(--ease);
+}
+.kp-pswp .kp-thumbs button:hover { opacity: 0.85; }
+.kp-pswp .kp-thumbs button[aria-current='true'] { opacity: 1; box-shadow: 0 0 0 2px var(--bronze-light); }
+.kp-pswp .kp-thumbs img { display: block; width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 767px) {
+  .kp-pswp .kp-thumbs button { width: 76px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:focus-within { scroll-behavior: auto; }
   *, *::before, *::after {

@@ -1,0 +1,296 @@
+---
+import { ChevronLeft, ChevronRight, Expand, Pause, Play, X } from '@lucide/astro';
+import Photo from './Photo.astro';
+import ShowingButton from './ShowingButton.astro';
+import { carouselPhotos, galleryChapters, galleryCount, type MediaItem } from '../data/media';
+import { lightbox, thumbnail } from '../lib/images';
+
+const withViewer = async (item: MediaItem) => ({ item, lb: await lightbox(item), thumb: await thumbnail(item) });
+const slides = await Promise.all(carouselPhotos.map(withViewer));
+const chapters = await Promise.all(galleryChapters.map(async (ch) => ({ ...ch, items: await Promise.all(ch.items.map(withViewer)) })));
+const total = slides.length;
+const pad = (n: number) => String(n).padStart(2, '0');
+const label = (m: MediaItem) => m.caption ?? m.alt;
+
+// Rendered width of a cover-fitted photo: the stage is 100vw wide, and on portrait phones 125vw tall (at most 75vh),
+// so landscape photos overflow it sideways there.
+function stageSizes({ src }: MediaItem): string {
+  const ar = src.width / src.height;
+  if (ar <= 0.8) return '100vw';
+  const phone = '(max-width: 767px) and (min-height: 501px)';
+  return `${phone} and (max-aspect-ratio: 3/5) ${Math.ceil(ar * 125)}vw, ${phone} and (max-aspect-ratio: ${Math.round(ar * 75)}/100) ${Math.ceil(ar * 75)}vh, 100vw`;
+}
+---
+
+<section class="section gallery on-dark" id="gallery" aria-labelledby="gallery-title">
+  <div class="container gallery-head">
+    <h2 class="eyebrow" id="gallery-title" data-reveal>Gallery</h2>
+    <button class="btn btn--ghost-light open-all" type="button" aria-haspopup="dialog" data-open-all>
+      <Expand aria-hidden="true" />
+      <span>View all photographs</span>
+    </button>
+  </div>
+
+  <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Photographs of the residence" data-carousel>
+    <div class="stage" data-carousel-stage>
+      <div class="track" data-carousel-track>
+        {slides.map(({ item, lb, thumb }, i) => (
+          <div class="slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}`} data-caption={label(item)} inert={i > 0}>
+            <a
+              class="slide-link"
+              href={lb.href}
+              data-pswp-src={lb.href}
+              data-pswp-srcset={lb.srcset}
+              data-pswp-width={lb.width}
+              data-pswp-height={lb.height}
+              data-pswp-caption={label(item)}
+              data-thumb={thumb}
+              data-gallery="carousel"
+              aria-label={`Open image: ${item.alt}`}
+            >
+              <Photo item={item} sizes={stageSizes(item)} />
+            </a>
+          </div>
+        ))}
+      </div>
+      <button class="arrow arrow--prev" type="button" aria-label="Previous photo" data-carousel-prev><ChevronLeft aria-hidden="true" /></button>
+      <button class="arrow arrow--next" type="button" aria-label="Next photo" data-carousel-next><ChevronRight aria-hidden="true" /></button>
+    </div>
+
+    <div class="container meta">
+      <p class="status" aria-live="off" data-carousel-status>
+        <span class="count"><span data-carousel-index>01</span> / {pad(total)}</span>
+        <span class="cap" data-carousel-caption>{label(slides[0]!.item)}</span>
+      </p>
+      <button class="toggle" type="button" aria-pressed="false" aria-label="Pause slideshow" data-carousel-toggle>
+        <Pause aria-hidden="true" class="i-pause" />
+        <Play aria-hidden="true" class="i-play" />
+      </button>
+    </div>
+    <div class="container">
+      <div class="thumbs" data-carousel-thumbs>
+        {slides.map(({ item }, i) => (
+          <button class="thumb-btn" type="button" aria-label={`Photo ${i + 1}: ${label(item)}`} aria-current={i === 0 ? 'true' : 'false'} data-carousel-thumb={i}>
+            <Photo item={item} alt="" sizes="(min-width: 768px) 144px, 104px" maxWidth={480} />
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <dialog class="all" id="all-photos" aria-labelledby="all-title" data-all-photos>
+    <div class="all-bar">
+      <h2 class="all-title" id="all-title" tabindex="-1">All {galleryCount} photographs</h2>
+      <div class="all-actions">
+        <ShowingButton origin="gallery" class="btn btn--light all-cta" arrow={false} />
+        <button class="all-close" type="button" aria-label="Close all photographs" data-all-close><X aria-hidden="true" /></button>
+      </div>
+    </div>
+    <nav class="all-nav" aria-label="Photograph chapters">
+      <ul role="list">
+        {chapters.map((ch) => <li><a href={`#all-${ch.id}`}>{ch.title} <span>{ch.items.length}</span></a></li>)}
+      </ul>
+    </nav>
+    <div class="all-body">
+      {chapters.map((ch) => (
+        <section class="all-chapter" id={`all-${ch.id}`} aria-labelledby={`all-${ch.id}-t`}>
+          <h3 class="all-chapter-title" id={`all-${ch.id}-t`}>{ch.title}</h3>
+          <div class="all-grid">
+            {ch.items.map(({ item, lb, thumb }) => (
+              <a
+                class="thumb frame"
+                href={lb.href}
+                data-pswp-src={lb.href}
+                data-pswp-srcset={lb.srcset}
+                data-pswp-width={lb.width}
+                data-pswp-height={lb.height}
+                data-pswp-caption={label(item)}
+                data-thumb={thumb}
+                data-gallery="all"
+                aria-label={`Open image: ${item.alt}`}
+              >
+                <Photo item={item} sizes="(min-width: 1000px) 24vw, (min-width: 640px) 32vw, 48vw" maxWidth={1080} />
+              </a>
+            ))}
+          </div>
+        </section>
+      ))}
+      <div class="all-end">
+        <p class="all-end-line">The residence is best understood in person.</p>
+        <ShowingButton origin="gallery" class="btn btn--light" />
+      </div>
+    </div>
+  </dialog>
+</section>
+
+<style>
+  .gallery { background: var(--ink); color: var(--stone); }
+  .gallery-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem 2rem; margin-bottom: clamp(2rem, 4vw, 3.25rem); }
+  .open-all :global(svg) { width: 1rem; height: 1rem; }
+  /* 320px screens: the label fits inside the gutters instead of widening the page. */
+  @media (max-width: 359px) {
+    .open-all { width: 100%; justify-content: center; padding-inline: 1rem; letter-spacing: 0.12em; }
+  }
+
+  /* Full-bleed stage, one photograph at a time, filling the frame; native scroll snapping carries the swipe. */
+  .stage {
+    position: relative;
+    height: min(56.25vw, max(26rem, calc(100vh - var(--header-h-solid) - 10rem)));
+    height: min(56.25vw, max(26rem, calc(100svh - var(--header-h-solid) - 10rem)));
+    background: var(--charcoal);
+  }
+  @media (max-width: 767px) and (min-height: 501px) {
+    .stage { height: min(125vw, 75vh); height: min(125vw, 75svh); }
+  }
+  @media (max-height: 500px) {
+    .stage { height: calc(100vh - var(--header-h-solid) - 3rem); height: calc(100svh - var(--header-h-solid) - 3rem); }
+  }
+  .track {
+    display: flex;
+    height: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .track::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 100%; height: 100%; overflow: hidden; scroll-snap-align: start; scroll-snap-stop: always; }
+  .slide-link { display: block; height: 100%; cursor: zoom-in; }
+  .slide-link :global(picture), .slide-link :global(img) { width: 100%; height: 100%; }
+  .slide-link :global(img) { object-fit: cover; transition: transform 1.6s var(--ease); }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .slide-link:hover :global(img) { transform: scale(1.05); }
+  }
+
+  .arrow {
+    position: absolute;
+    top: 50%;
+    width: 48px;
+    height: 48px;
+    margin-top: -24px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ivory) 55%, transparent);
+    background: color-mix(in srgb, var(--ink) 35%, transparent);
+    color: var(--ivory);
+    transition: background-color 0.3s var(--ease), color 0.3s var(--ease);
+  }
+  .arrow:hover { background: var(--ivory); color: var(--ink); }
+  .arrow :global(svg) { width: 1.35rem; height: 1.35rem; }
+  .arrow--prev { left: var(--gutter); }
+  .arrow--next { right: var(--gutter); }
+  @media (max-width: 767px) {
+    .arrow { width: 40px; height: 40px; margin-top: -20px; }
+  }
+
+  .meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1rem; }
+  .status { display: flex; align-items: baseline; gap: 0.9rem; min-width: 0; }
+  .count { flex: none; font-family: var(--font-serif); font-size: 1.05rem; letter-spacing: 0.02em; color: var(--bronze-light); }
+  .cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--step--1); color: var(--sand); }
+  .toggle {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ivory) 30%, transparent);
+    background: transparent;
+    color: var(--ivory);
+    transition: background-color 0.3s var(--ease), color 0.3s var(--ease);
+  }
+  .toggle:hover { background: var(--ivory); color: var(--ink); }
+  .toggle :global(svg) { width: 0.95rem; height: 0.95rem; }
+  .toggle :global(.i-play), .toggle[aria-pressed='true'] :global(.i-pause) { display: none; }
+  .toggle[aria-pressed='true'] :global(.i-play) { display: block; }
+
+  .thumbs {
+    position: relative;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.75rem 3px 3px;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ivory) 22%, transparent) transparent;
+  }
+  .thumb-btn {
+    position: relative;
+    flex: none;
+    width: 144px;
+    aspect-ratio: 3 / 2;
+    padding: 0;
+    border: 0;
+    background: var(--charcoal);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.3s var(--ease);
+  }
+  .thumb-btn :global(picture), .thumb-btn :global(img) { width: 100%; height: 100%; }
+  .thumb-btn :global(img) { object-fit: cover; }
+  .thumb-btn::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 2px transparent; transition: box-shadow 0.3s var(--ease); }
+  .thumb-btn:hover { opacity: 0.85; }
+  .thumb-btn[aria-current='true'] { opacity: 1; }
+  .thumb-btn[aria-current='true']::after { box-shadow: inset 0 0 0 2px var(--bronze-light); }
+  @media (max-width: 767px) {
+    .thumb-btn { width: 104px; }
+  }
+
+  .all {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--ink);
+    color: var(--stone);
+    overscroll-behavior: contain;
+  }
+  .all::backdrop { background: var(--ink); }
+  .all-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem var(--gutter);
+    background: color-mix(in srgb, var(--ink) 94%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--ivory) 10%, transparent);
+  }
+  .all-title { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-2); color: var(--ivory); }
+  .all-title:focus { outline: none; }
+  .all-actions { display: flex; align-items: center; gap: 0.75rem; }
+  .all-cta { min-height: 44px; padding-block: 0.7rem; }
+  @media (max-width: 767px) {
+    .all-cta { display: none; }
+  }
+  .all-end { display: grid; justify-items: center; gap: 1.5rem; padding: clamp(3rem, 8vw, 6rem) var(--gutter) clamp(4rem, 10vw, 7rem); text-align: center; }
+  .all-end-line { font-family: var(--font-serif); font-size: var(--step-2); color: var(--ivory); }
+  .all-close {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--ivory) 30%, transparent);
+    background: transparent;
+    color: var(--ivory);
+  }
+  .all-close :global(svg) { width: 1.1rem; height: 1.1rem; }
+  .all-close:hover { background: var(--ivory); color: var(--ink); }
+  .all-nav { padding: 0.6rem var(--gutter); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid color-mix(in srgb, var(--ivory) 10%, transparent); }
+  .all-nav ul { display: flex; gap: 1.5rem; white-space: nowrap; }
+  .all-nav a { display: inline-flex; gap: 0.4rem; min-height: 44px; align-items: center; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none; color: var(--stone); }
+  .all-nav a span { color: var(--bronze-light); letter-spacing: 0.04em; }
+  .all-nav a:hover { color: var(--ivory); }
+  .all-body { padding: 0 var(--gutter) clamp(3rem, 6vw, 5rem); }
+  .all-chapter { padding-top: clamp(2rem, 4vw, 3rem); scroll-margin-top: 8rem; }
+  .all-chapter-title { font-family: var(--font-serif); font-weight: 400; font-size: var(--step-2); color: var(--ivory); margin-bottom: 1rem; }
+  .all-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  @media (min-width: 640px) { .all-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) { .all-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .thumb { display: block; aspect-ratio: 3 / 2; cursor: zoom-in; }
+  .thumb :global(picture), .thumb :global(img) { width: 100%; height: 100%; }
+  .thumb :global(img) { object-fit: cover; }
+</style>

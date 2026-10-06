@@ -60,3 +60,9 @@ export async function lightbox(item: MediaItem): Promise<LightboxData> {
   ]);
   return { href: full.src, srcset: set.srcSet.attribute, width: src.width, height: src.height };
 }
+
+// Small WebP for the photo viewer's thumbnail strip.
+export async function thumbnail(item: MediaItem): Promise<string> {
+  const { src } = item;
+  return (await getImage({ src, width: Math.min(320, src.width), format: 'webp', quality: 72 })).src;
+}

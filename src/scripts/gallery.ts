@@ -8,6 +8,7 @@ interface Slide {
   height: number;
   alt: string;
   caption: string;
+  thumb?: string;
 }
 
 function slidesFor(name: string): { anchors: HTMLAnchorElement[]; slides: Slide[] } {
@@ -19,6 +20,7 @@ function slidesFor(name: string): { anchors: HTMLAnchorElement[]; slides: Slide[
     height: Number(a.dataset.pswpHeight),
     alt: a.querySelector('img')?.alt ?? '',
     caption: a.dataset.pswpCaption ?? '',
+    thumb: a.dataset.thumb,
   }));
   return { anchors, slides };
 }
@@ -29,14 +31,22 @@ async function open(name: string, index: number, opener: HTMLElement | null): Pr
   if (!slides.length) return;
   // Inside a modal dialog (the full collection) the viewer must live in the dialog's top layer too.
   const host = opener?.closest<HTMLDialogElement>('dialog[open]') ?? undefined;
+  const strip = slides.length > 1 && slides.every((s) => s.thumb);
+  const pad = (n: number) => String(n).padStart(2, '0');
 
   const pswp = new PhotoSwipe({
     dataSource: slides,
     index,
     appendToEl: host,
-    bgOpacity: 0.97,
+    bgOpacity: 1,
     showHideAnimationType: 'fade',
     preload: [1, 2],
+    counter: false,
+    // Room below the photo for the caption and thumbnail strip, and beside it for the arrows on wide screens.
+    paddingFn: (viewport) => {
+      const wide = viewport.x >= 768;
+      return { top: 56, bottom: strip ? (wide ? 168 : 128) : 56, left: wide ? 88 : 0, right: wide ? 88 : 0 };
+    },
     wheelToZoom: true,
     imageClickAction: 'zoom-or-close',
     tapAction: 'toggle-controls',
@@ -55,13 +65,47 @@ async function open(name: string, index: number, opener: HTMLElement | null): Pr
       isButton: false,
       appendTo: 'root',
       onInit: (el) => {
-        el.setAttribute('aria-live', 'polite');
-        const update = () => {
+        const bar = document.createElement('p');
+        bar.className = 'kp-bar';
+        bar.setAttribute('aria-live', 'polite');
+        const count = bar.appendChild(document.createElement('span'));
+        count.className = 'kp-count';
+        const caption = bar.appendChild(document.createElement('span'));
+        caption.className = 'kp-cap';
+        el.appendChild(bar);
+
+        const thumbs = strip
+          ? slides.map((s, i) => {
+              const b = document.createElement('button');
+              b.type = 'button';
+              b.setAttribute('aria-label', `Photo ${i + 1}: ${s.caption || s.alt}`);
+              const img = b.appendChild(document.createElement('img'));
+              img.src = s.thumb!;
+              img.alt = '';
+              img.loading = 'lazy';
+              b.addEventListener('click', () => pswp.goTo(i));
+              return b;
+            })
+          : [];
+        const row = document.createElement('div');
+        row.className = 'kp-thumbs';
+        thumbs.forEach((t) => row.appendChild(t));
+        if (strip) el.appendChild(row);
+
+        const update = (smooth = true) => {
+          const i = pswp.currIndex;
           const s = pswp.currSlide?.data as Partial<Slide> | undefined;
-          el.textContent = s ? `${s.caption ?? ''}  ·  ${pswp.currIndex + 1} / ${slides.length}` : '';
+          count.textContent = `${pad(i + 1)} / ${pad(slides.length)}`;
+          caption.textContent = s?.caption ?? '';
+          thumbs.forEach((t, k) => t.setAttribute('aria-current', String(k === i)));
+          const t = thumbs[i];
+          const behavior = smooth && !prefersReducedMotion() ? 'smooth' : 'auto';
+          if (t) row.scrollTo({ left: t.offsetLeft - (row.clientWidth - t.offsetWidth) / 2, behavior });
         };
-        pswp.on('change', update);
-        update();
+        pswp.on('change', () => update());
+        // The strip is laid out only once the viewer is in the page.
+        pswp.on('afterInit', () => update(false));
+        update(false);
       },
     });
   });
@@ -72,13 +116,14 @@ async function open(name: string, index: number, opener: HTMLElement | null): Pr
     root?.setAttribute('aria-label', 'Photo gallery');
   });
   pswp.on('destroy', () => {
+    document.dispatchEvent(new CustomEvent('kp:viewer-close', { detail: { gallery: name, index: pswp.currIndex } }));
     opener?.focus({ preventScroll: true });
   });
   pswp.init();
   track('gallery_open', { gallery_name: name });
 }
 
-// "View all 46 photographs": a full-screen dialog of every photograph, grouped by chapter.
+// "View all photographs": a full-screen dialog of every photograph, grouped by chapter.
 function initAllPhotos(): void {
   const dialog = document.querySelector<HTMLDialogElement>('[data-all-photos]');
   if (!dialog) return;

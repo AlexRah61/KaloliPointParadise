@@ -18,7 +18,7 @@ const a = property.agent;
   <div class="container grid-12 showing-grid">
     <div class="aside">
       <p class="eyebrow">Private showings</p>
-      <h2 class="display display--lg" id="showing-title">See it <em>in person.</em></h2>
+      <h2 class="display display--lg" id="showing-title">Experience the Residence <em>in Person.</em></h2>
       <p class="intro">
         Request a private showing of {property.address.streetDisplay}. It takes about thirty seconds.
       </p>
@@ -180,7 +180,7 @@ const a = property.agent;
   .band { background: var(--ink); color: var(--stone); }
   .showing-grid { row-gap: 3rem; align-items: start; }
   .aside { grid-column: 1 / -1; display: grid; gap: 1.4rem; justify-items: start; }
-  .aside .display { max-width: 11ch; }
+  .aside .display { max-width: 14ch; }
   .intro { color: var(--stone); max-width: 36ch; }
   .steps { display: grid; gap: 0.9rem; margin-top: 0.25rem; color: var(--ivory); }
   .steps li { display: grid; grid-template-columns: 2rem 1fr; gap: 0.75rem; align-items: baseline; }
@@ -198,6 +198,8 @@ const a = property.agent;
   .form :focus-visible { outline-color: var(--bronze-deep); }
   @media (min-width: 1000px) {
     .aside { grid-column: 1 / span 4; position: sticky; top: calc(var(--header-h) + 2.5rem); }
+    /* Sized so "the Residence" still fits one line of the narrow column. */
+    .aside .display { font-size: min(var(--step-4), 5.2vw); }
     .form-wrap { grid-column: 6 / -1; }
   }
 

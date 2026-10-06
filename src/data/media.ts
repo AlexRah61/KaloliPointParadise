@@ -82,6 +82,10 @@ export const media = {
   architectureAerial: photo('DJI_20261001133625_0617_D.jpg', 'Elevated view of the octagonal three-level home with stacked lanais, red ti and tall pines', {
     caption: 'Three stacked levels, three lanais', focus: '47% 45%',
   }),
+  // The hero's drone frame, captioned for the residence introduction (cropped 4:5 to the house).
+  residenceFront: photo('DJI_20261001133743_0632_D.jpg', 'Front of the octagonal three-level home, a lanai on every level, above lava-rock planters and a lawn framed by palms and red ti', {
+    caption: 'Three stacked levels, three lanais', focus: '50% 50%',
+  }),
   frontElevation: photo('C04A4635.jpg', 'Front elevation of the octagonal three-level home: a covered lanai at garden level, the wraparound lanai above it and the top-floor lanai', {
     caption: 'Three lanais, one on every level', focus: '48% 40%',
   }),
@@ -93,7 +97,7 @@ export const media = {
 
   // Living & kitchen (level 2)
   kitchenWide: photo('C04A4916.jpg', 'Renovated kitchen with dark shaker cabinets, a waterfall quartz island and French doors to the lanai', {
-    caption: 'Kitchen, renovated in 2023', focus: '45% 55%',
+    caption: 'Renovated Kitchen & Interiors', focus: '45% 55%',
   }),
   kitchenIsland: photo('C04A4921.jpg', 'Kitchen island with bar seating and stainless refrigerator', { caption: 'Island seating' }),
   kitchenHall: photo('C04A4958.jpg', 'Kitchen island looking toward the hall', { caption: 'Kitchen' }),
@@ -221,6 +225,19 @@ export const galleryChapters: GalleryChapter[] = [
 ];
 
 export const galleryCount = galleryChapters.reduce((n, c) => n + c.items.length, 0);
+
+// The listing agent's carousel order (iokuarealestate.com, MLS 733498); the rest of the collection follows in its own order.
+const agentCarousel: MediaItem[] = [
+  media.heroAerial, media.entry, media.gardenLiving, media.gardenLiving2, media.gardenBath, media.flexRoom,
+  media.lanaiCovered, media.kitchenWide, media.kitchenSink, media.kitchenDetail, media.kitchenIsland, media.kitchenHall,
+  media.familyRoom, media.familyMedia, media.lanaiFurnished, media.primaryBedroom, media.primaryShower, media.primaryBath,
+  media.primaryVanity, media.primaryDesk, media.lanaiRockers, media.groundsWall, media.groundsLawn, media.groundsGarden,
+  media.architectureAerial, media.contextInland, media.contextOcean, media.sunsetYard, media.sunsetHouse, media.nightSky,
+];
+export const carouselPhotos: MediaItem[] = [
+  ...agentCarousel,
+  ...galleryChapters.flatMap((c) => c.items).filter((m) => !agentCarousel.includes(m)),
+];
 
 // Paid assets intentionally left out of the editorial set (still in assets/ and listed in docs/MEDIA_INVENTORY.md).
 export const excludedFromSite = [
