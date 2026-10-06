@@ -386,12 +386,14 @@ test.describe('page', () => {
       page.locator(sel).evaluateAll((as) => as.map((a) => (a as HTMLElement).dataset.pswpSrc!.split('/').pop()!.split('.')[0]!));
     const order = await files('[data-carousel] a[data-gallery="carousel"]');
     const album = await files('a[data-gallery="all"]');
-    expect(order).toHaveLength(46);
+    expect(order).toHaveLength(45);
     expect([...order].sort(), 'every photograph, once').toEqual([...album].sort());
+    expect(album, 'the low-quality ocean film still is gone').not.toContain('film-ocean-aerial');
     expect(order.slice(0, 3), 'in the agent’s order').toEqual(['DJI_20261001133743_0632_D', 'C04A4658', 'C04A4729']);
     expect(order[29]).toBe('listing-night-sky');
-    const rest = order.slice(30);
+    const rest = order.slice(30, -1);
     expect(rest, 'then the others in album order').toEqual(album.filter((f) => rest.includes(f)));
+    expect(order.at(-1), 'the stair still closes the carousel').toBe('film-stair-light');
 
     const carousel = page.locator('[data-carousel]');
     const stage = carousel.locator('[data-carousel-stage]');
@@ -401,7 +403,7 @@ test.describe('page', () => {
     await carousel.locator('[data-carousel-thumb="3"]').click();
     await expect(index).toHaveText('04');
     await expect(carousel.locator('[data-carousel-toggle]'), 'choosing a photo stops the slideshow').toHaveAttribute('aria-pressed', 'true');
-    await expect(carousel.locator('.slide:not([inert])')).toHaveAttribute('aria-label', '4 of 46');
+    await expect(carousel.locator('.slide:not([inert])')).toHaveAttribute('aria-label', '4 of 45');
     await carousel.locator('[data-carousel-next]').click();
     await expect(index).toHaveText('05');
     await carousel.locator('[data-carousel-prev]').click();
@@ -458,15 +460,15 @@ test.describe('page', () => {
     await expect(pswp).toHaveAttribute('role', 'dialog');
     const count = pswp.locator('.kp-count');
     const thumbs = pswp.locator('.kp-thumbs button');
-    await expect(count).toHaveText('05 / 46');
-    await expect(thumbs).toHaveCount(46);
+    await expect(count).toHaveText('05 / 45');
+    await expect(thumbs).toHaveCount(45);
     await expect(thumbs.nth(4)).toHaveAttribute('aria-current', 'true');
     await expect(pswp.locator('.pswp__counter'), 'one counter only').toHaveCount(0);
     await page.waitForTimeout(700);
     await page.keyboard.press('ArrowRight');
-    await expect(count).toHaveText('06 / 46');
+    await expect(count).toHaveText('06 / 45');
     await thumbs.nth(9).click();
-    await expect(count).toHaveText('10 / 46');
+    await expect(count).toHaveText('10 / 45');
     await expect(thumbs.nth(9)).toHaveAttribute('aria-current', 'true');
     let last = 10;
     if (!hasTouch) {
@@ -478,7 +480,7 @@ test.describe('page', () => {
       await swipe(page, pswp.locator('.pswp__scroll-wrap'), browserName, hasTouch);
       last = 11;
     }
-    await expect(count).toHaveText(`${last} / 46`);
+    await expect(count).toHaveText(`${last} / 45`);
     await page.keyboard.press('Escape');
     await expect(pswp).toHaveCount(0);
     await expect(index, 'the carousel waits on the last photo viewed').toHaveText(String(last));
@@ -492,22 +494,22 @@ test.describe('page', () => {
     await expect(figure.locator('a')).toHaveAttribute('data-pswp-src', /DJI_20261001133743_0632_D/);
   });
 
-  test('all 46 photographs open in one collection, with the viewer inside it', { tag: '@phone' }, async ({ page }) => {
+  test('all 45 photographs open in one collection, with the viewer inside it', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const open = page.locator('[data-open-all]');
     await open.scrollIntoViewIfNeeded();
     await open.click();
     const all = page.locator('#all-photos');
     await expect(all).toBeVisible();
-    await expect(all.locator('a[data-gallery="all"]')).toHaveCount(46);
+    await expect(all.locator('a[data-gallery="all"]')).toHaveCount(45);
     await expect(page.locator('[data-sticky-cta]')).toHaveAttribute('data-visible', 'false');
     await all.locator('a[data-gallery="all"]').nth(5).click();
     const caption = all.locator('.pswp__kp-caption');
-    await expect(caption).toContainText('06 / 46');
-    await expect(caption.locator('.kp-thumbs button'), 'the same full-size experience as the carousel').toHaveCount(46);
+    await expect(caption).toContainText('06 / 45');
+    await expect(caption.locator('.kp-thumbs button'), 'the same full-size experience as the carousel').toHaveCount(45);
     await page.waitForTimeout(700);
     await page.keyboard.press('ArrowRight');
-    await expect(caption).toContainText('07 / 46');
+    await expect(caption).toContainText('07 / 45');
     await page.keyboard.press('Escape');
     await expect(all.locator('.pswp')).toHaveCount(0);
     await expect(all).toBeVisible();

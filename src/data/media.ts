@@ -21,6 +21,8 @@ export interface MediaItem {
   source: MediaSource;
   /** CSS object-position focal point used when the frame is cropped. */
   focus?: string;
+  /** Focal point on the gallery carousel's wide stage, where it differs from `focus`. */
+  stageFocus?: string;
 }
 
 function load(glob: Glob, path: string): ImageMetadata {
@@ -147,7 +149,7 @@ export const media = {
   groundsLawn: photo('C04A4710.jpg', 'Wide lawn bordered by palms and a lava-rock wall', { caption: 'Half an acre, enclosed by rock wall and fencing', focus: '50% 60%' }),
   groundsGarden: photo('C04A4700.jpg', 'Tropical garden with red ti, palms and lawn', { caption: 'Mature palms and ornamentals', focus: '50% 55%' }),
   groundsWall: photo('C04A4705.jpg', 'Lawn and rock wall beside the house', { caption: 'Rock wall and lawn', focus: '50% 55%' }),
-  citrus: still('film-citrus.jpg', 'Citrus fruit ripening on a tree in the garden, with a gecko on the fruit', {
+  citrus: still('film-citrus.jpg', 'Citrus fruit ripening on a tree in the garden', {
     caption: 'Established fruit trees', focus: '50% 45%',
   }),
 
@@ -165,7 +167,7 @@ export const media = {
     caption: 'Raised garden beds', focus: '50% 62%',
   }),
   rainbow: phone('lanai-rainbow.jpg', 'IMG_5186.JPG', 'A double rainbow over the lawn and red ti hedge, seen from the lanai', {
-    caption: 'A double rainbow from the lanai', focus: '50% 40%',
+    caption: 'A double rainbow from the lanai', focus: '50% 40%', stageFocus: '50% 22%',
   }),
 
   // Setting
@@ -175,7 +177,6 @@ export const media = {
   contextHigh: photo('DJI_20261001134148_0700_D.jpg', 'Aerial view over the neighborhood to the ocean', { caption: 'Kaloli Point' }),
   contextInland: photo('DJI_20261001134233_0716_D.jpg', 'Aerial view across the treetops of Hawaiian Paradise Park', { caption: 'Hawaiian Paradise Park' }),
   aerialSite: photo('DJI_20261001133658_0627_D.jpg', 'Aerial view of the house, lawn, solar array and water catchment tank', { caption: 'The site from above' }),
-  filmOcean: still('film-ocean-aerial.jpg', 'Aerial view over treetops toward the Pacific Ocean', { caption: 'Toward the ocean', focus: '50% 50%' }),
   filmPoster: still('film-poster-v2.jpg', 'Aerial view of the octagonal residence among tall pines, from the property film', {
     caption: 'From the property film', focus: '50% 50%',
   }),
@@ -188,13 +189,15 @@ export const media = {
     caption: 'Honu on the lava shoreline near Kaloli Point', focus: '50% 70%',
   }),
   honuShore: phone('kaloli-honu-shore.jpg', 'IMG_8217.jpeg', 'A green sea turtle resting on a sandy cove near Kaloli Point', {
-    caption: 'Honu resting on the shore near Kaloli Point', focus: '50% 70%',
+    caption: 'Honu resting on the shore near Kaloli Point', focus: '50% 70%', stageFocus: '50% 40%',
   }),
 
   // Evenings (owner photographs from the public listing)
   sunsetHouse: owner('listing-sunset-house.jpg', 'The house beneath a pink and violet sky at dusk, with hibiscus in the foreground', { caption: 'Dusk over the house', focus: '56% 45%' }),
   sunsetYard: owner('listing-sunset-yard.jpg', 'Sunset clouds and a crescent moon over the lawn, palms and red ti', { caption: 'Sunset over the garden', focus: '50% 40%' }),
-  nightSky: owner('listing-night-sky.jpg', 'A starry night sky above the illuminated house', { caption: 'Stars above the house', focus: '50% 35%' }),
+  nightSky: owner('listing-night-sky.jpg', 'A starry night sky above the illuminated house', {
+    caption: 'Stars above the house', focus: '50% 35%', stageFocus: '50% 70%',
+  }),
 
   agentPortrait: still('agent-misti.jpg', 'Misti R. Tyrin, listing agent', { focus: '62% 30%', file: 'assets/misti pic.avif', source: 'agent' }),
 } satisfies Record<string, MediaItem>;
@@ -220,13 +223,14 @@ export const galleryChapters: GalleryChapter[] = [
   { id: 'lanais', title: 'Lanais', items: [media.lanaiCovered, media.lanaiFurnished, media.lanaiRockers, media.lanaiTopView, media.rainbow] },
   { id: 'retreat', title: 'Bedrooms & baths', items: [media.primaryBedroom, media.primaryDesk, media.primaryBath, media.primaryShower, media.primaryVanity, media.flexRoom, media.gardenBath] },
   { id: 'grounds', title: 'Grounds & garden', items: [media.groundsGarden, media.groundsWall, media.groundsLawn, media.coconuts, media.lilikoi, media.papaya, media.raisedBeds, media.citrus] },
-  { id: 'setting', title: 'Kaloli Point', items: [media.aerialSite, media.contextOcean, media.contextHigh, media.contextInland, media.filmOcean, media.lookout, media.honuLava, media.honuShore] },
+  { id: 'setting', title: 'Kaloli Point', items: [media.aerialSite, media.contextOcean, media.contextHigh, media.contextInland, media.lookout, media.honuLava, media.honuShore] },
   { id: 'evenings', title: 'Evenings', items: [media.sunsetHouse, media.sunsetYard, media.nightSky] },
 ];
 
 export const galleryCount = galleryChapters.reduce((n, c) => n + c.items.length, 0);
 
-// The listing agent's carousel order (iokuarealestate.com, MLS 733498); the rest of the collection follows in its own order.
+// The listing agent's carousel order (iokuarealestate.com, MLS 733498); the rest of the collection follows in its own order,
+// and the stair still closes the carousel.
 const agentCarousel: MediaItem[] = [
   media.heroAerial, media.entry, media.gardenLiving, media.gardenLiving2, media.gardenBath, media.flexRoom,
   media.lanaiCovered, media.kitchenWide, media.kitchenSink, media.kitchenDetail, media.kitchenIsland, media.kitchenHall,
@@ -236,7 +240,8 @@ const agentCarousel: MediaItem[] = [
 ];
 export const carouselPhotos: MediaItem[] = [
   ...agentCarousel,
-  ...galleryChapters.flatMap((c) => c.items).filter((m) => !agentCarousel.includes(m)),
+  ...galleryChapters.flatMap((c) => c.items).filter((m) => !agentCarousel.includes(m) && m !== media.stairLight),
+  media.stairLight,
 ];
 
 // Paid assets intentionally left out of the editorial set (still in assets/ and listed in docs/MEDIA_INVENTORY.md).

@@ -48,7 +48,7 @@ function stageSizes({ src }: MediaItem): string {
               data-gallery="carousel"
               aria-label={`Open image: ${item.alt}`}
             >
-              <Photo item={item} sizes={stageSizes(item)} />
+              <Photo item={item} sizes={stageSizes(item)} focus={item.stageFocus} />
             </a>
           </div>
         ))}

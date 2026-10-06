@@ -33,11 +33,10 @@ function probe(file) {
 }
 
 // Real frames from the paid films. Sky-replaced moments (~29.6s, ~45.6s of the edit) are deliberately excluded.
+// film-citrus.jpg (48.3 s of the edit) has a lizard retouched out, so it is kept as committed and never regenerated.
 const STILLS = [
-  { file: 'film-ocean-aerial.jpg', t: 0.25, note: 'Opening aerial toward the Pacific horizon' },
   { file: 'film-poster-v2.jpg', t: 1.6, src: FILM, note: 'The residence from the air, opening of the final cut (film poster)' },
   { file: 'film-stair-light.jpg', t: 16.2, note: 'Stair with step light linking the levels' },
-  { file: 'film-citrus.jpg', t: 48.3, note: 'Citrus tree on the grounds (gecko on fruit)' },
 ];
 
 mkdirSync(STILLS_DIR, { recursive: true });
