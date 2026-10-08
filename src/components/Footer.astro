@@ -32,11 +32,18 @@ const a = property.agent;
             <dd>{a.license}</dd>
           </div>
         </dl>
-        <a class="btn btn--ghost-light agent-site" href={a.website} target="_blank" rel="noopener" data-track="agent_contact_click" data-track-location="footer">
-          <span>Visit {a.firstName}’s website</span>
-          <ArrowUpRight aria-hidden="true" />
-          <span class="visually-hidden">(opens in a new tab)</span>
-        </a>
+        <div class="agent-links">
+          <a class="btn btn--ghost-light zillow" href={property.zillowUrl} target="_blank" rel="noopener">
+            <span>View the listing on Zillow</span>
+            <ArrowUpRight aria-hidden="true" />
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+          <a class="btn btn--ghost-light agent-site" href={a.website} target="_blank" rel="noopener" data-track="agent_contact_click" data-track-location="footer">
+            <span>Visit {a.firstName}’s website</span>
+            <ArrowUpRight aria-hidden="true" />
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+        </div>
       </div>
     </div>
 
@@ -113,9 +120,11 @@ const a = property.agent;
   .agent-contacts dd { margin: 0.3rem 0 0; font-size: var(--step-0); color: var(--ivory); }
   .agent-contacts a { text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 3px; }
   .agent-contacts a:hover { color: var(--white); text-decoration-color: currentColor; }
-  .agent-site { margin-top: 1.75rem; }
+  .agent-links { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; margin-top: 1.75rem; }
+  /* Small phones: full-width buttons whose labels may wrap instead of widening the page. */
   @media (max-width: 399px) {
-    .agent-site { padding-inline: 1.1rem; letter-spacing: 0.12em; }
+    .agent-links { width: 100%; }
+    .agent-links .btn { width: 100%; padding-inline: 1.1rem; letter-spacing: 0.12em; white-space: normal; text-align: center; }
   }
   .identity :global(.mark) { width: 40px; height: 40px; color: var(--bronze-light); margin-bottom: 1.25rem; }
   .addr { font-family: var(--font-serif); font-size: var(--step-2); color: var(--ivory); line-height: 1.1; }

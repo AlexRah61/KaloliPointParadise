@@ -7,6 +7,8 @@ export const property = {
   name: 'Kaloli Point Residence',
   status: 'For Sale',
   mls: '733498',
+  // The public Zillow listing, as the owners share it.
+  zillowUrl: 'https://www.zillow.com/homedetails/15-1077-Amau-Rd-Keaau-HI-96749/138288853_zpid/?utm_campaign=zillowwebmessage&utm_medium=referral&utm_source=txtshare',
   price: 679_000,
   priceDisplay: '$679,000',
 

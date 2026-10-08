@@ -737,7 +737,7 @@ test.describe('page', () => {
     expect(await tracked(page, 'agent_contact_click')).toEqual([{ cta_location: 'header', contact_method: 'phone' }]);
   });
 
-  test('the footer introduces the listing agent with her portrait, direct lines and website', { tag: '@phone' }, async ({ page }) => {
+  test('the footer introduces the listing agent with her portrait, direct lines, website and the Zillow listing', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const card = page.locator('.site-footer .agent-card');
     await card.evaluate((el) => el.scrollIntoView({ block: 'center' }));
@@ -752,6 +752,11 @@ test.describe('page', () => {
     await expect(site).toHaveAttribute('href', 'https://misti.iokuarealestate.com/');
     await expect(site).toHaveAttribute('target', '_blank');
     await expect(site).toHaveAttribute('rel', /noopener/);
+    const zillow = card.getByRole('link', { name: /View the listing on Zillow/ });
+    await expect(zillow).toBeVisible();
+    await expect(zillow).toHaveAttribute('href', /^https:\/\/www\.zillow\.com\/homedetails\/15-1077-Amau-Rd-Keaau-HI-96749\/138288853_zpid\//);
+    await expect(zillow).toHaveAttribute('target', '_blank');
+    await expect(zillow).toHaveAttribute('rel', /noopener/);
     await page.evaluate(() => document.addEventListener('click', (e) => (e.target as Element).closest('a[target="_blank"]') && e.preventDefault(), true));
     await site.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await site.click();
