@@ -3,10 +3,10 @@
 // JavaScript Detections) instead of the policy needing 'unsafe-inline'.
 
 /**
- * @param {{ ga?: boolean, meta?: boolean, noindex?: boolean, nonce?: string }} [options]
+ * @param {{ ga?: boolean, meta?: boolean, noindex?: boolean, nonce?: string, scriptHashes?: string[] }} [options]
  * @returns {[string, string][]}
  */
-export function securityHeaders({ ga = false, meta = false, noindex = false, nonce } = {}) {
+export function securityHeaders({ ga = false, meta = false, noindex = false, nonce, scriptHashes = [] } = {}) {
   /** @param {(string | false | undefined)[]} xs */
   const src = (...xs) => xs.filter(Boolean).join(' ');
   const csp = [
@@ -14,6 +14,8 @@ export function securityHeaders({ ga = false, meta = false, noindex = false, non
     `script-src ${src(
       "'self'",
       nonce && `'nonce-${nonce}'`,
+      // Inline scripts allowed by exact content (the Meta Pixel base code).
+      ...scriptHashes,
       'https://challenges.cloudflare.com',
       // Cloudflare Web Analytics beacon, auto-injected at the edge; it reports to this site's /cdn-cgi/rum ('self').
       'https://static.cloudflareinsights.com',

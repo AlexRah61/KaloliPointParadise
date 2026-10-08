@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 
-// Runs against a deployed site must not add test traffic to GA4 or Cloudflare Web Analytics.
+// Runs against a deployed site must not add test traffic to GA4, Cloudflare Web Analytics or the Meta Pixel.
 // The Cloudflare beacon itself still loads (stubbing it breaks its SRI check); only its report is answered locally.
 export const test = base.extend<{ quietAnalytics: void }>({
   quietAnalytics: [
@@ -10,6 +10,9 @@ export const test = base.extend<{ quietAnalytics: void }>({
           route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }),
         );
         await context.route(/\/cdn-cgi\/rum/, (route) => route.fulfill({ status: 204, body: '' }));
+        // tests/meta-pixel.spec.ts loads the real fbevents.js per page and answers its hits locally.
+        await context.route(/^https:\/\/connect\.facebook\.net\//, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
+        await context.route(/^https:\/\/www\.facebook\.com\/tr/, (route) => route.fulfill({ status: 204, body: '' }));
       }
       await use();
     },

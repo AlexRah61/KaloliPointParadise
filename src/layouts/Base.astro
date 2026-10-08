@@ -8,6 +8,7 @@ import interUrl from '@fontsource-variable/inter/files/inter-latin-wght-normal.w
 import { getImage } from 'astro:assets';
 import { property, SITE_URL } from '../data/property';
 import { media } from '../data/media';
+import { metaPixelCode } from '../lib/meta-pixel.mjs';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import StickyCTA from '../components/StickyCTA.astro';
@@ -75,8 +76,13 @@ const pixel = import.meta.env.PUBLIC_META_PIXEL_ID ?? '';
     <meta name="twitter:image" content={ogUrl} />
 
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+
+    {pixel && <script is:inline set:html={metaPixelCode(pixel)} />}
+    {pixel && (
+      <noscript><img height="1" width="1" style="display:none" src={`https://www.facebook.com/tr?id=${pixel}&ev=PageView&noscript=1`} /></noscript>
+    )}
   </head>
-  <body class={bodyClass} data-ga4={ga4 || undefined} data-meta-pixel={pixel || undefined}>
+  <body class={bodyClass} data-ga4={ga4 || undefined}>
     <a class="skip-link" href="#main">Skip to content</a>
     <Header minimal={minimalChrome} />
     <main id="main" tabindex="-1">

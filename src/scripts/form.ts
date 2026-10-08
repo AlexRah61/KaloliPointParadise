@@ -63,6 +63,8 @@ export function initShowingForm(): void {
 
   // ---- analytics: first interaction ----
   let startedAt = 0;
+  // One conversion per stored lead, however the success is handled.
+  const counted = new Set<string>();
   form.addEventListener('focusin', () => {
     if (startedAt) return;
     startedAt = Date.now();
@@ -339,7 +341,8 @@ export function initShowingForm(): void {
 
     if (res?.ok && data?.ok) {
       // The conversion means "accepted and persisted": decoy successes for bot-like submissions are never counted.
-      if (data.leadId && !isLikelyBot(payload.company, payload.elapsedMs)) {
+      if (data.leadId && !counted.has(data.leadId) && !isLikelyBot(payload.company, payload.elapsedMs)) {
+        counted.add(data.leadId);
         track('showing_request_submitted', { cta_location: payload.ctaOrigin, tour_type: data.tourType });
       }
       form.reset();

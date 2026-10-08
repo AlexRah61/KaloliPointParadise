@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { property } from '../data/property';
 const a = property.agent;
-const updated = 'October 4, 2026';
+const updated = 'October 7, 2026';
 ---
 
 <Base title={`Privacy notice | ${property.name}`} description="How this property website handles showing requests and visitor data." path="/privacy/" minimalChrome>
@@ -32,7 +32,8 @@ const updated = 'October 4, 2026';
         <p>
           Your request is sent to the listing agent so she can call you to arrange a showing, with a copy to the website's
           administrator, and you receive an acknowledgement by email. A showing is never confirmed by this website; only
-          the listing agent can confirm a time with you. We do not sell your information or share it for anyone else's
+          the listing agent can confirm a time with you. We do not sell your information. Apart from the scrambled contact
+          details Meta may receive to measure our ads (see Advertising measurement below), it is not shared for anyone else's
           marketing.
         </p>
 
@@ -48,9 +49,20 @@ const updated = 'October 4, 2026';
           film, clicks on showing or contact buttons, and whether a showing request was submitted. Google Analytics sets its
           own cookies and is governed by Google's privacy policy; you can opt out with Google's
           <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener">browser add-on</a>. Your name, phone number,
-          email, message and requested showing times are never sent to Google or to any other analytics or advertising
-          platform. Cloudflare Web Analytics, part of the hosting service, also measures page speed and aggregate visits
-          without cookies.
+          email, message and requested showing times are never sent to Google. Cloudflare Web Analytics, part of the
+          hosting service, also measures page speed and aggregate visits without cookies.
+        </p>
+
+        <h2>Advertising measurement</h2>
+        <p>
+          The site uses the Meta Pixel to measure visits from our ads on Facebook and Instagram: the pages you view, a click
+          to call the listing agent, and whether a showing request was submitted. Meta receives your IP address, browser
+          and device details and the address of the page, and sets its own cookies (such as _fbp). When you fill in and
+          send the showing request form, the pixel may also send your name, email address and phone number to Meta in
+          hashed (scrambled) form, so Meta can match the visit to its accounts; your message and requested showing times
+          are not sent. Meta handles this information under
+          <a href="https://www.facebook.com/privacy/policy" rel="noopener">Meta's Privacy Policy</a>, and you can manage how
+          it is used for ads in your <a href="https://www.facebook.com/adpreferences" rel="noopener">ad preferences</a>.
         </p>
 
         <h2>Bot protection</h2>

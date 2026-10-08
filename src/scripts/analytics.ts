@@ -41,10 +41,9 @@ export function track(event: AnalyticsEvent, params: Params = {}): void {
   // Observational only: a vendor error must never interrupt the visitor.
   try {
     window.gtag?.('event', event, clean);
-    if (window.fbq) {
-      if (event === 'showing_request_submitted') window.fbq('track', 'Lead');
-      else window.fbq('trackCustom', event, clean);
-    }
+    // Meta gets only the ad conversions; the Pixel base code in the page head already sent the PageView.
+    if (event === 'showing_request_submitted') window.fbq?.('track', 'Lead', { content_name: 'Request Private Showing', ...clean });
+    else if (event === 'agent_contact_click' && clean.contact_method === 'phone') window.fbq?.('track', 'Contact', { content_name: 'Call agent', ...clean });
   } catch {
     // analytics is optional
   }
@@ -58,9 +57,9 @@ function loadScript(src: string): void {
   document.head.appendChild(s);
 }
 
-// Stubs (no network) queue events from the very first interaction; the vendor scripts load only after the page is idle.
+// The stub (no network) queues events from the very first interaction; gtag.js loads only after the page is idle.
 function setupVendors(): string[] {
-  const { ga4, metaPixel } = document.body.dataset;
+  const { ga4 } = document.body.dataset;
   const scripts: string[] = [];
   if (ga4 && /^G-[A-Z0-9]{4,20}$/.test(ga4)) {
     window.dataLayer = window.dataLayer || [];
@@ -72,21 +71,6 @@ function setupVendors(): string[] {
     window.gtag('js', new Date());
     window.gtag('config', ga4);
     scripts.push(`https://www.googletagmanager.com/gtag/js?id=${ga4}`);
-  }
-  if (metaPixel && /^\d{8,20}$/.test(metaPixel)) {
-    const fbq = function (...args: unknown[]) {
-      if (fbq.callMethod) fbq.callMethod(...args);
-      else fbq.queue.push(args);
-    } as ((...args: unknown[]) => void) & { queue: unknown[]; loaded: boolean; version: string; callMethod?: (...args: unknown[]) => void; push: unknown };
-    fbq.queue = [];
-    fbq.loaded = true;
-    fbq.version = '2.0';
-    fbq.push = fbq;
-    window.fbq = fbq;
-    window._fbq = fbq;
-    window.fbq('init', metaPixel);
-    window.fbq('track', 'PageView');
-    scripts.push('https://connect.facebook.net/en_US/fbevents.js');
   }
   return scripts;
 }
