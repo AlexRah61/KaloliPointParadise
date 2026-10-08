@@ -101,7 +101,7 @@ test.describe('page', () => {
     await expect(hero).toContainText('2 Bed · 3 Bath · 1,968 SF · 0.50 Acre');
     await expect(hero.getByRole('heading', { level: 1 })).toHaveAccessibleName('Island Living at Kaloli Point');
     await expect(hero.getByRole('link', { name: /request a private or virtual tour/i })).toBeVisible();
-    await expect(hero.getByText("Can't visit Hawaiʻi in person? Virtual tours are available for qualified remote buyers.")).toBeVisible();
+    await expect(hero.getByText("Can't visit Hawaiʻi in person? Virtual tours are available for remote buyers.")).toBeVisible();
     await expect(hero.getByRole('link', { name: /explore the residence/i })).toHaveCount(0);
     await expect(hero.getByRole('link', { name: /watch the film/i })).toBeAttached();
     // One primary conversion CTA: every button-style entry point carries the same label, and no separate video-tour button.
@@ -176,7 +176,7 @@ test.describe('page', () => {
     const sheet = page.locator('#showing-sheet');
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole('heading', { name: 'Request a Private or Virtual Tour' })).toBeVisible();
-    await expect(sheet.locator('#h-remote')).toHaveText("Can't visit Hawaiʻi in person? Virtual tours are available for qualified remote buyers.");
+    await expect(sheet.locator('#h-remote')).toHaveText("Can't visit Hawaiʻi in person? Virtual tours are available for remote buyers.");
     await expect(sheet.locator('#showing-form')).toHaveCount(1);
     await expect(page.locator('#showing-form')).toHaveCount(1);
     await expect(sheet.getByRole('button', { name: /send showing request/i })).toBeAttached();
