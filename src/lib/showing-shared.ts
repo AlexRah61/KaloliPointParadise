@@ -6,9 +6,8 @@ export const SLOT_END_MIN = 17 * 60 + 30;
 // Turnstile action rendered by the form and required by siteverify on the server.
 export const TURNSTILE_ACTION = 'showing_request';
 
-// Honeypot filled or an impossible fill time: the API answers with a decoy success and stores nothing.
-export const isLikelyBot = (company: string | undefined, elapsedMs: number | undefined): boolean =>
-  (company ?? '').trim() !== '' || (elapsedMs !== undefined && elapsedMs > 0 && elapsedMs < 800);
+// An impossible fill time: the API answers with a decoy success and stores nothing.
+export const isLikelyBot = (elapsedMs: number | undefined): boolean => elapsedMs !== undefined && elapsedMs > 0 && elapsedMs < 800;
 
 export function slotValues(): string[] {
   const out: string[] = [];

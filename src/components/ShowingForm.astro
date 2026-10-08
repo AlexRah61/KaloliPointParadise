@@ -120,9 +120,10 @@ const a = property.agent;
             <p class="error" id="e-message" data-error-for="message"></p>
           </div>
 
+          <!-- Spam trap: nothing here may look like a contact or address field, or browsers autofill it. -->
           <div class="hp" aria-hidden="true">
-            <label for="f-company">Company</label>
-            <input id="f-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+            <label for="f-kp-check">Leave this field empty</label>
+            <input id="f-kp-check" name="kp_check" type="text" tabindex="-1" autocomplete="off" />
           </div>
         </div>
 

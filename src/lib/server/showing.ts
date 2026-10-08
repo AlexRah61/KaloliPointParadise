@@ -105,7 +105,7 @@ export async function handleShowingRequest(request: Request, env: Env): Promise<
   };
 
   // Decoy success so bots learn nothing; nothing is stored or sent.
-  if (isLikelyBot(req.company, req.elapsedMs)) {
+  if (isLikelyBot(req.elapsedMs)) {
     return json(200, { ok: true, leadId: newLeadId(), notified: true, ...echo });
   }
 
@@ -127,6 +127,8 @@ export async function handleShowingRequest(request: Request, env: Env): Promise<
     console.error('lead insert failed', (err as Error).message);
     return json(500, { ok: false, error: `Your request could not be saved. ${callUs}` });
   }
+  // Browser autofill can fill the hidden trap field; Turnstile already passed, so the request is kept and only noted.
+  if ((req.company ?? '').trim()) console.warn(`[lead ${lead.id}] trap field filled (likely autofill); stored`);
 
   // 4. Notify. A delivery failure never touches the stored lead; the cron keeps retrying it.
   let notified = false;

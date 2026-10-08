@@ -154,21 +154,43 @@ test.describe('showing form', () => {
     console.log(`LEAD ${body.leadId} via ${origin}`);
   });
 
-  test('honeypot submissions are accepted silently but not stored', async ({ page }) => {
+  test('browser autofill in the hidden spam trap still stores, emails and counts the request', async ({ page }) => {
     await isolateIp(page);
     await page.goto('/#showing');
-    const form = await fillValid(page, uniqueEmail('bot'));
-    await page.locator('#f-company').evaluate((el: HTMLInputElement) => (el.value = 'Spam Co'));
-    const [resp] = await Promise.all([
-      page.waitForResponse('**/api/showing-request'),
-      form.getByRole('button', { name: SUBMIT }).click(),
-    ]);
+    const trap = page.locator('#showing-form .hp input');
+    const names = [await trap.getAttribute('name'), await trap.getAttribute('id'), await page.locator('#showing-form .hp label').textContent()];
+    for (const n of names) expect(n ?? '', 'nothing about the trap may look like a contact or address field to autofill').not.toMatch(/compan|organi[sz]|\borg\b|name|mail|phone|tel|address|city|zip|postal|country/i);
+    const form = await fillValid(page, uniqueEmail('autofill'));
+    // What Edge's autofill did to the old "Company" trap: a saved organisation lands in the hidden field.
+    await trap.evaluate((el: HTMLInputElement) => (el.value = 'Microsoft'));
+    await page.waitForTimeout(1000);
+    const [resp] = await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);
+    const body = await resp.json();
+    expect(resp.status(), JSON.stringify(body)).toBe(200);
+    expect(body.notified, 'the listing agent is emailed').toBe(true);
+    await expect(page.locator('#showing-dialog')).toBeVisible();
+    const ev = await page.evaluate(() => ((window as KpWindow).__kpEvents ?? []).map((e) => e.event));
+    expect(ev, 'and it counts as a conversion').toContain('showing_request_submitted');
+    const stored = storedOrigin(body.leadId);
+    if (stored !== undefined) expect(stored, 'stored in D1').toBe('inline_form');
+    console.log(`AUTOFILL LEAD ${body.leadId}`);
+  });
+
+  test('an impossibly fast submission gets a silent decoy and is not stored', async ({ page }) => {
+    const ip = `10.${(Math.random() * 250) | 0}.${(Math.random() * 250) | 0}.${(Math.random() * 250) | 0}`;
+    await page.route('**/api/showing-request', (route) => {
+      const sent = JSON.parse(route.request().postData() ?? '{}');
+      return route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip }, postData: JSON.stringify({ ...sent, elapsedMs: 120 }) });
+    });
+    await page.goto('/#showing');
+    const form = await fillValid(page, uniqueEmail('fast'));
+    const [resp] = await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);
     const body = await resp.json();
     expect(body.ok).toBe(true);
     await expect(page.locator('#showing-dialog')).toBeVisible();
-    const ev = await page.evaluate(() => ((window as KpWindow).__kpEvents ?? []).map((e) => e.event));
-    expect(ev, 'a decoy success is never a conversion').not.toContain('showing_request_submitted');
-    console.log(`HONEYPOT ${body.leadId}`);
+    const stored = storedOrigin(body.leadId);
+    if (stored !== undefined) expect(stored, 'a decoy is never stored').toBeNull();
+    console.log(`DECOY ${body.leadId}`);
   });
 });
 
