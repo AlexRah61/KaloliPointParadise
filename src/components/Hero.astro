@@ -1,5 +1,5 @@
 ---
-import { ArrowRight, Pause, Play } from '@lucide/astro';
+import { Pause, Play } from '@lucide/astro';
 import ShowingButton from './ShowingButton.astro';
 import { media } from '../data/media';
 import { property } from '../data/property';
@@ -75,7 +75,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     </div>
     <div class="hero-actions reveal-4" data-hero-cta>
       <ShowingButton origin="hero" class="btn btn--light" arrow={false} />
-      <a class="text-link explore" href="#residence">{property.cta.explore} <ArrowRight aria-hidden="true" /></a>
+      <p class="hero-note">{property.cta.remoteNote}</p>
     </div>
     <a class="film-link reveal-4" href="#film" data-film-trigger>
       <span class="film-ring" aria-hidden="true"><Play /></span>
@@ -259,8 +259,13 @@ const pad = (n: number) => String(n).padStart(2, '0');
     gap: 0.85rem 2rem;
     margin-top: clamp(1.5rem, 3.2vh, 2.25rem);
   }
-  .explore { color: var(--ivory); }
-  .explore :global(svg) { width: 0.95rem; height: 0.95rem; }
+  .hero-note {
+    max-width: 22rem;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--stone);
+    text-shadow: 0 1px 12px rgba(10, 12, 10, 0.6);
+  }
 
   .film-link {
     display: inline-flex;
@@ -298,6 +303,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .film-link { position: absolute; right: 0; bottom: clamp(3.25rem, 9vh, 6.5rem); margin-top: 0; max-width: none !important; }
     .hero-content > * { max-width: min(38rem, 46vw); }
   }
+  /* Wide screens: the note sits beside the button, still clear of the film link at the far edge. */
+  @media (min-width: 1024px) {
+    .hero-content > .hero-actions { max-width: min(46rem, calc(100% - 19rem)); }
+    .hero-note { flex: 1 1 16rem; }
+  }
 
   /* Phones in portrait: the moving image keeps the top of the screen at near-native resolution and the type
      sits on ink below it, instead of a 16:9 frame cropped to full portrait height. Landscape phones keep the
@@ -320,8 +330,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .hero-meta { gap: 0.4rem 1.25rem; }
     .facts { letter-spacing: 0.14em; font-size: 0.7rem; }
     .hero-actions { flex-direction: column; align-items: stretch; gap: 1rem; }
-    .hero-actions :global(.btn) { width: 100%; }
-    .explore { align-self: flex-start; }
+    .hero-actions :global(.btn) { width: 100%; padding-inline: 1rem; letter-spacing: 0.1em; }
+  }
+  /* 320-359 px phones: the long tour label still fits on one line. */
+  @media (max-width: 359px) and (min-height: 501px) {
+    .hero-actions :global(.btn) { padding-inline: 0.6rem; letter-spacing: 0.06em; font-size: 0.72rem; }
   }
 
   /* Short landscape screens: the same composition, with tighter type so the price and actions stay near the fold. */

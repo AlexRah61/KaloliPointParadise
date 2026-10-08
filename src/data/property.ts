@@ -136,8 +136,8 @@ export const property = {
 
   // A showing is always a request: never "book", "reserve" or "confirm" until a real scheduling system exists.
   cta: {
-    primary: 'Request Private Showing',
-    explore: 'Explore the Residence',
+    primary: 'Request a Private or Virtual Tour',
+    remoteNote: "Can't visit Hawaiʻi in person? Virtual tours are available for qualified remote buyers.",
     film: 'Watch the film',
     call: 'Call the listing agent',
     submit: 'Send Showing Request',

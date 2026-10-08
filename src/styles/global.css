@@ -226,6 +226,8 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 .btn--ghost-light { --btn-bg: transparent; --btn-fg: var(--ivory); --btn-border: color-mix(in srgb, var(--ivory) 55%, transparent); }
 .btn--ghost-light:hover { --btn-bg: color-mix(in srgb, var(--ivory) 14%, transparent); --btn-fg: var(--white); --btn-border: var(--ivory); }
 .btn--block { width: 100%; }
+/* The tour CTA label is long: where a placement is too narrow it wraps to two balanced lines instead of overflowing. */
+.btn[data-showing-cta] { white-space: normal; text-wrap: balance; text-align: center; }
 
 .text-link {
   display: inline-flex;

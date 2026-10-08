@@ -269,12 +269,22 @@ const links = [
     .nav-desktop { display: block; }
     .menu-toggle { display: none; }
   }
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .actions :global(.header-cta) { padding-inline: 0.95rem; letter-spacing: 0.1em; }
+  }
   /* Section links, the agent's number and the request button share one line. */
-  @media (min-width: 1280px) and (max-width: 1439px) {
+  @media (min-width: 1280px) and (max-width: 1599px) {
     .bar { gap: 1rem; }
     .nav-desktop ul { gap: 1rem; }
     .nav-desktop a { letter-spacing: 0.12em; }
     .actions :global(.header-cta) { padding-inline: 0.95rem; letter-spacing: 0.12em; }
+  }
+  @media (min-width: 1280px) and (max-width: 1439px) {
+    .bar { gap: 0.8rem; }
+    .nav-desktop ul { gap: 0.8rem; }
+    .nav-desktop a { letter-spacing: 0.08em; }
+    .header-call { padding-left: 0.8rem; margin-right: 0; }
+    .actions :global(.header-cta) { padding-inline: 0.8rem; letter-spacing: 0.06em; }
   }
   /* No room beside the brand and the menu: the menu carries the number instead. */
   @media (max-width: 359px), (max-width: 639px) and (max-height: 500px) {

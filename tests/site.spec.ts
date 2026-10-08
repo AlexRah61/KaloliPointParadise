@@ -94,15 +94,21 @@ test.describe('page', () => {
     expect(m.lcp).toBeLessThan(4000);
   });
 
-  test('hero shows price, facts and both calls to action', { tag: '@phone' }, async ({ page }) => {
+  test('hero shows price, facts, the one tour request and the remote-buyer note', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     const hero = page.locator('[data-hero]');
     await expect(hero).toContainText('$679,000');
     await expect(hero).toContainText('2 Bed · 3 Bath · 1,968 SF · 0.50 Acre');
     await expect(hero.getByRole('heading', { level: 1 })).toHaveAccessibleName('Island Living at Kaloli Point');
-    await expect(hero.getByRole('link', { name: /request private showing/i })).toBeVisible();
-    await expect(hero.getByRole('link', { name: /explore the residence/i })).toBeVisible();
+    await expect(hero.getByRole('link', { name: /request a private or virtual tour/i })).toBeVisible();
+    await expect(hero.getByText("Can't visit Hawaiʻi in person? Virtual tours are available for qualified remote buyers.")).toBeVisible();
+    await expect(hero.getByRole('link', { name: /explore the residence/i })).toHaveCount(0);
     await expect(hero.getByRole('link', { name: /watch the film/i })).toBeAttached();
+    // One primary conversion CTA: every button-style entry point carries the same label, and no separate video-tour button.
+    const labels = (await page.locator('.btn[data-showing-cta]').allTextContents()).map((t) => t.trim());
+    expect(new Set(labels)).toEqual(new Set(['Request a Private or Virtual Tour']));
+    await expect(page.getByRole('link', { name: /video tour/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /video tour/i })).toHaveCount(0);
     const box = await hero.boundingBox();
     const vp = page.viewportSize()!;
     expect(box!.height).toBeGreaterThanOrEqual(vp.height * 0.95);
@@ -163,13 +169,14 @@ test.describe('page', () => {
 
   test('hero CTA opens the request sheet in place and is tracked', async ({ page }) => {
     await page.goto('/');
-    const cta = page.locator('[data-hero]').getByRole('link', { name: /request private showing/i });
+    const cta = page.locator('[data-hero]').getByRole('link', { name: /request a private or virtual tour/i });
     await cta.scrollIntoViewIfNeeded();
     const y0 = await page.evaluate(() => window.scrollY);
     await cta.click();
     const sheet = page.locator('#showing-sheet');
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole('heading', { name: 'Request Private Showing' })).toBeVisible();
+    await expect(sheet.getByRole('heading', { name: 'Request a Private or Virtual Tour' })).toBeVisible();
+    await expect(sheet.locator('#h-remote')).toHaveText("Can't visit Hawaiʻi in person? Virtual tours are available for qualified remote buyers.");
     await expect(sheet.locator('#showing-form')).toHaveCount(1);
     await expect(page.locator('#showing-form')).toHaveCount(1);
     await expect(sheet.getByRole('button', { name: /send showing request/i })).toBeAttached();
@@ -184,7 +191,7 @@ test.describe('page', () => {
 
   test('a request started in the sheet is still there when reopened from another CTA', async ({ page }) => {
     await page.goto('/');
-    await page.locator('[data-hero]').getByRole('link', { name: /request private showing/i }).click();
+    await page.locator('[data-hero]').getByRole('link', { name: /request a private or virtual tour/i }).click();
     const sheet = page.locator('#showing-sheet');
     await sheet.getByLabel('Full name').fill('Continuity Check');
     await sheet.getByLabel('Preferred time').selectOption('10:00');
@@ -198,7 +205,7 @@ test.describe('page', () => {
     await expect(sheet.getByLabel('Preferred time')).toHaveValue('10:00');
   });
 
-  test('Request Private Showing stays reachable from top to footer and back', { tag: '@phone' }, async ({ page }) => {
+  test('the tour request CTA stays reachable from top to footer and back', { tag: '@phone' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(700);
     const probe = () =>

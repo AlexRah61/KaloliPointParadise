@@ -31,11 +31,11 @@ import ShowingButton from './ShowingButton.astro';
       visibility: visible;
       transition: transform 0.3s var(--ease), visibility 0s linear 0s;
     }
-    .sticky-cta :global(.sticky-main) { flex: 1; min-width: 0; min-height: 3rem; padding-inline: 1rem; }
+    .sticky-cta :global(.sticky-main) { flex: 1; min-width: 0; min-height: 3rem; padding: 0.4rem 1rem; letter-spacing: 0.1em; }
   }
   /* 320-359 px phones: the full label still fits on one line. */
   @media (max-width: 359px) and (min-height: 501px) {
     .sticky-cta { padding-inline: max(0.75rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-right)); }
-    .sticky-cta :global(.sticky-main) { padding-inline: 0.6rem; letter-spacing: 0.12em; }
+    .sticky-cta :global(.sticky-main) { padding-inline: 0.6rem; letter-spacing: 0.06em; font-size: 0.72rem; }
   }
 </style>

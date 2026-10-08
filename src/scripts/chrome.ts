@@ -41,14 +41,14 @@ export function initHeader(): void {
   });
 }
 
-// One persistent "Request Private Showing" entry point:
+// One persistent "Request a Private or Virtual Tour" entry point:
 // - header CTA (tablet/desktop/landscape) steps back only while the closing showing chapter fills the screen;
 // - phone action bar appears once the hero CTA is gone and hides while the showing chapter is on screen, a field
 //   has focus, a dialog is open, or the started film is on screen (its native controls sit along the bottom edge).
 export function initPersistentCta(): void {
   const header = document.querySelector<HTMLElement>('[data-header]');
   const bar = document.querySelector<HTMLElement>('[data-sticky-cta]');
-  // Track the hero button itself: on phones its wrapper also holds the stacked secondary link.
+  // Track the hero button itself: on phones its wrapper also holds the stacked remote-buyer note.
   const heroCta =
     document.querySelector<HTMLElement>('[data-hero-cta] [data-showing-cta]') ?? document.querySelector<HTMLElement>('[data-hero-cta]');
   const film = document.querySelector<HTMLElement>('[data-film]');

@@ -78,8 +78,9 @@ const a = property.agent;
           </div>
           <p class="hint span-2" id="h-tz">All times are Hawaiʻi Standard Time (HST).</p>
 
-          <fieldset class="field span-2 tour">
+          <fieldset class="field span-2 tour" aria-describedby="h-remote">
             <legend>Showing type</legend>
+            <p class="remote" id="h-remote">{property.cta.remoteNote}</p>
             <div class="choices">
               <label class="choice"><input type="radio" name="tourType" value="in_person" checked /><span>In person</span></label>
               <label class="choice"><input type="radio" name="tourType" value="video" /><span>Live video tour</span></label>
@@ -253,6 +254,7 @@ const a = property.agent;
   .hint { font-size: 0.82rem; color: var(--moss-deep); margin-top: -0.6rem; }
 
   .tour { border: 0; padding: 0; margin: 0; }
+  .remote { margin-top: 0.35rem; font-size: 0.9rem; line-height: 1.5; color: var(--charcoal); max-width: 52ch; }
   .choices { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.45rem; }
   .choice { position: relative; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 0.95rem; }
   .choice input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
