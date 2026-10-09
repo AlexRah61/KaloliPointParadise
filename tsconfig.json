@@ -1,7 +1,7 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*", "worker-configuration.d.ts"],
-  "exclude": ["dist", "node_modules", "tools/_audit", "public/media"],
+  "exclude": ["dist", "node_modules", "tools/_audit", "public/media", ".github", "reports"],
   "compilerOptions": {
     "noUncheckedIndexedAccess": true
   }

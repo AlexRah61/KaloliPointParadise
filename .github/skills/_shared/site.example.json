@@ -1,0 +1,8 @@
+{
+  "site": { "host": "example.com", "name": "Property website" },
+  "ga4": { "accountId": "000000000", "propertyId": "000000000", "measurementId": "G-XXXXXXXXXX", "timezone": "Pacific/Honolulu" },
+  "meta": { "adAccountId": "000000000000000", "businessId": "000000000000000", "pixelId": "000000000000000", "timezone": "America/Los_Angeles" },
+  "cloudflare": { "accountId": "00000000000000000000000000000000", "zoneId": "00000000000000000000000000000000", "turnstileSiteKey": "0x0000000000000000000000" },
+  "d1": { "database": "database-name" },
+  "edge": { "profileDirectory": "Default" }
+}

@@ -1,0 +1,47 @@
+{
+  "$comment": "Funnel definition, GA4 event names, benchmarks and diagnostic thresholds for ad-funnel-analysis. Rates are fractions (0.01 = 1%).",
+  "defaults": { "lookbackDays": 7 },
+  "site": {
+    "sections": ["top", "residence", "gallery", "film", "levels", "lanais", "location", "evenings", "showing", "map"],
+    "engagedDepth": "gallery",
+    "formSection": "showing"
+  },
+  "ga4": {
+    "events": {
+      "cta": "showing_cta_click",
+      "formStarts": "showing_form_start",
+      "submitted": "showing_request_submitted",
+      "gallery": "gallery_open",
+      "film": "property_film_start",
+      "agentContact": "agent_contact_click"
+    },
+    "quickEvents": ["cta", "formStarts", "submitted"],
+    "keyEvent": "showing_request_submitted",
+    "pendingCampaign": "(cross-network)",
+    "nonAdCampaigns": ["(direct)", "(not set)", "(referral)", "(organic)", "(none)"],
+    "dataCenterCities": ["Altoona", "Forest City", "Prineville", "Fort Worth", "Gallatin", "Dublin", "Clonee", "Lulea", "Luleå", "Odense", "Henrico", "Los Lunas", "New Albany", "Papillion", "Eagle Mountain", "Huntsville", "DeKalb", "Stanton Springs", "Mesa", "Kuna", "Temple", "Jeffersonville"]
+  },
+  "stages": [
+    { "key": "impressions", "label": "Impressions", "source": "Meta" },
+    { "key": "clicks", "label": "Link clicks", "source": "Meta" },
+    { "key": "lpv", "label": "Landing page views", "source": "Meta pixel" },
+    { "key": "sessions", "label": "GA4 sessions", "source": "GA4" },
+    { "key": "engaged", "label": "Engaged sessions", "source": "GA4" },
+    { "key": "cta", "label": "Tour button clicks", "source": "GA4" },
+    { "key": "formStarts", "label": "Form starts", "source": "GA4" },
+    { "key": "leads", "label": "Tour requests stored", "source": "Lead database" }
+  ],
+  "benchmarks": {
+    "linkCtr": { "good": 0.015, "poor": 0.005 },
+    "lpvPerClick": { "good": 0.85, "poor": 0.75 },
+    "sessionCapture": { "poor": 0.6 },
+    "engagementRate": { "poor": 0.25 },
+    "leadPerLpv": 0.005,
+    "frequencyHigh": 3,
+    "pendingShareHigh": 0.3,
+    "priorityMarketSpendShareMin": 0.5,
+    "learningHours": 48,
+    "pacingLow": 0.6,
+    "dataCenterShareHigh": 0.15
+  }
+}

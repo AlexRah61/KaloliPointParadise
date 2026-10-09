@@ -1,0 +1,13 @@
+{
+  "$comment": "Copy to campaigns.local.json (git-ignored). Meta campaign -> funnel mapping; UTM names are also read live from each ad's URL parameters.",
+  "priorityMarkets": ["US"],
+  "targeting": { "countries": ["US", "CA"], "regions": { "US": ["Hawaii", "California"] } },
+  "campaigns": [
+    { "key": "video-a", "label": "Video A", "metaCampaign": "Campaign A name in Ads Manager", "utm": ["utm_campaign_value_a"], "dailyBudget": 10 },
+    { "key": "video-b", "label": "Video B", "metaCampaign": "Campaign B name in Ads Manager", "utm": ["/regex-for-b/i"], "dailyBudget": 10 }
+  ],
+  "sharedUtm": [{ "utm": "old_shared_value", "until": "2026-01-01T00:00:00-08:00", "campaigns": ["video-a", "video-b"] }],
+  "ignoreUtm": ["qa_campaign"],
+  "experiments": [{ "label": "A/B test", "url": "https://www.facebook.com/test-and-learn/report?act=AD_ACCOUNT_ID&test_id=TEST_ID" }],
+  "changes": [{ "at": "2026-01-01T12:00:00-08:00", "what": "Describe a targeting, budget or creative change", "removedCountries": ["JP"] }]
+}

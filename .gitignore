@@ -26,3 +26,7 @@ tools/_audit/
 test-results/
 playwright-report/
 qa/
+
+# Agent skills: account IDs stay local, and run outputs (marketing data) are never committed
+.github/skills/**/*.local.json
+reports/
