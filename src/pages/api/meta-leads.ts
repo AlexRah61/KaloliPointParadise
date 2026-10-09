@@ -1,10 +1,10 @@
 import type { APIRoute } from 'astro';
-import { env, waitUntil } from 'cloudflare:workers';
-import { handleShowingRequest } from '../../lib/server/showing';
+import { env } from 'cloudflare:workers';
+import { handleMetaLeads } from '../../lib/server/meta-leads';
 
 export const prerender = false;
 
-export const POST: APIRoute = ({ request }) => handleShowingRequest(request, env, waitUntil);
+export const POST: APIRoute = ({ request }) => handleMetaLeads(request, env);
 
 export const ALL: APIRoute = () =>
   new Response(JSON.stringify({ ok: false, error: 'Method not allowed' }), {

@@ -2,8 +2,11 @@ import { property } from '../../data/property';
 import { isLikelyBot, slotLabel, TURNSTILE_ACTION } from '../showing-shared';
 import { fieldErrors, ShowingRequestSchema } from './schema';
 import { hashIp, insertLead, isTestEmail, newLeadId, notifyLead, recentCounts } from './leads';
+import { sendCapiLead } from './meta-capi';
 
 const MAX_BODY_BYTES = 16 * 1024;
+
+export type Defer = (work: Promise<unknown>) => void;
 
 interface SiteverifyResult {
   success: boolean;
@@ -66,7 +69,20 @@ async function verifyTurnstile(env: Env, token: string, ip: string | null): Prom
   return { ok: true, reason: 'ok' };
 }
 
-export async function handleShowingRequest(request: Request, env: Env): Promise<Response> {
+// Same-origin page URL the form was sent from (Meta's event_source_url), else nothing.
+function pageUrl(request: Request, env: Env): string | null {
+  const ref = request.headers.get('Referer');
+  if (!ref) return null;
+  try {
+    const u = new URL(ref);
+    return u.origin === new URL(request.url).origin || u.origin === new URL(env.SITE_URL).origin ? u.href.slice(0, 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+// `defer` runs work after the response (waitUntil); the Meta Conversions API call never delays the visitor.
+export async function handleShowingRequest(request: Request, env: Env, defer: Defer = () => {}): Promise<Response> {
   if (!allowedOrigin(request, env)) return json(403, { ok: false, error: 'This request was blocked.' });
   if (!(request.headers.get('Content-Type') ?? '').includes('application/json')) {
     return json(415, { ok: false, error: 'Unsupported request format.' });
@@ -97,7 +113,10 @@ export async function handleShowingRequest(request: Request, env: Env): Promise<
   const parsed = ShowingRequestSchema.safeParse(body);
   if (!parsed.success) return json(422, { ok: false, errors: fieldErrors(parsed.error) });
   const req = parsed.data;
+  // The browser pixel sends its Lead with this ID too, so Meta counts the two copies once.
+  const eventId = crypto.randomUUID();
   const echo = {
+    eventId,
     preferred: slotLabel(req.preferredDate, req.preferredTime),
     alternate: slotLabel(req.alternateDate, req.alternateTime),
     flexible: req.flexible,
@@ -129,6 +148,16 @@ export async function handleShowingRequest(request: Request, env: Env): Promise<
   }
   // Browser autofill can fill the hidden trap field; Turnstile already passed, so the request is kept and only noted.
   if ((req.company ?? '').trim()) console.warn(`[lead ${lead.id}] trap field filled (likely autofill); stored`);
+
+  defer(
+    sendCapiLead(env, lead, {
+      eventId,
+      pageUrl: pageUrl(request, env),
+      ip,
+      userAgent: request.headers.get('User-Agent'),
+      cookies: request.headers.get('Cookie'),
+    }),
+  );
 
   // 4. Notify. A delivery failure never touches the stored lead; the cron keeps retrying it.
   let notified = false;

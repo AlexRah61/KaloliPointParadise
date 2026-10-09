@@ -40,7 +40,7 @@ two days or 30 landing page views.
 | Finding | What it means | Fix |
 |---|---|---|
 | `engagement-low` | Visitors leave from the first screen | Make the hero continue the ad (same scene, price, location); keep the tour button visible; check the depth table |
-| `form-friction` | Form started but not sent | Require name + one contact method; make date/time optional with "flexible" pre-selected (form and API schema) |
+| `form-friction` | Form started but not sent | The form asks only for name + email since 9 Oct 2026; check verification (Turnstile) failures, error answers and the phone layout, and compare with the Meta lead-form campaign |
 | `zero-leads-signal` | Zero requests is no longer bad luck | Offer a lighter step next to the tour button (virtual tour, "text me details", floor plan by email); retarget engaged visitors |
 | `zero-leads-normal` | Too few page views to expect a request | Keep running; watch engaged visits and tour-button clicks |
 | `site-day-better` / `site-day-worse` | More / fewer in-app visitors scrolled past the first screen than the day before | Tie it to the change log: keep a change that helped, revert one that hurt |

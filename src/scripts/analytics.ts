@@ -34,7 +34,8 @@ declare global {
   }
 }
 
-export function track(event: AnalyticsEvent, params: Params = {}): void {
+// eventId: the random ID the server also sends to Meta's Conversions API, so Meta keeps one Lead (never a lead ID).
+export function track(event: AnalyticsEvent, params: Params = {}, eventId?: string): void {
   const clean: Record<string, string> = {};
   for (const [k, v] of Object.entries(params)) if (PARAMS.has(k) && typeof v === 'string' && SAFE_VALUE.test(v)) clean[k] = v;
   (window.__kpEvents ??= []).push({ event, params: clean });
@@ -42,8 +43,10 @@ export function track(event: AnalyticsEvent, params: Params = {}): void {
   try {
     window.gtag?.('event', event, clean);
     // Meta gets only the ad conversions; the Pixel base code in the page head already sent the PageView.
-    if (event === 'showing_request_submitted') window.fbq?.('track', 'Lead', { content_name: 'Request Private Showing', ...clean });
-    else if (event === 'agent_contact_click' && clean.contact_method === 'phone') window.fbq?.('track', 'Contact', { content_name: 'Call agent', ...clean });
+    if (event === 'showing_request_submitted') {
+      const dedup = eventId && /^[0-9a-f-]{36}$/i.test(eventId) ? { eventID: eventId } : undefined;
+      window.fbq?.('track', 'Lead', { content_name: 'Request Private Showing', ...clean }, ...(dedup ? [dedup] : []));
+    } else if (event === 'agent_contact_click' && clean.contact_method === 'phone') window.fbq?.('track', 'Contact', { content_name: 'Call agent', ...clean });
   } catch {
     // analytics is optional
   }

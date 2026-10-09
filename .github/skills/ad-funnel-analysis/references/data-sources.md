@@ -62,3 +62,6 @@
   visit are reported as "without ad tags" (organic post, profile link or an untagged ad).
 - `is_test = 1` rows (QA and owner tests) are excluded everywhere; a real-looking request sent from an address that
   ran QA tools is reported as internal.
+- `source = 'meta_lead_form'` rows come from Meta lead forms (Instant Forms), forwarded from the owner's Google Sheet
+  by `tools/meta-lead-sync/Code.gs`; their `utm_campaign` is the Meta campaign name and `utm_source` is facebook or
+  instagram. They never visited the website, so they have no visit, button or tour type.

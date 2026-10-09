@@ -229,6 +229,7 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
     if (s) owners = entities.filter((e) => s.campaigns.includes(e.key));
     const row = {
       created_at: l.created_at,
+      source: l.source ?? 'website',
       tour_type: l.tour_type,
       cta_origin: l.cta_origin,
       utm_campaign: name || null,

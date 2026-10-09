@@ -11,11 +11,6 @@ type Win = Window & {
 const GA = /googletagmanager\.com|google-analytics\.com|analytics\.google\.com/;
 const FAKE_ID = 'G-TEST0000';
 const SUBMIT = /send showing request/i;
-const hstPlus = (days: number) => {
-  const d = new Date(Date.now() - 10 * 3600 * 1000);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
 
 // Serve the local test build as if PUBLIC_GA4_ID were set (to a fake ID) and let its CSP allow gtag.js.
 async function withGa4(page: Page) {
@@ -99,12 +94,10 @@ test.describe('analytics (GA4)', () => {
     expect(await gaEvents(page, 'showing_request_submitted'), 'opening or starting the form is not a conversion').toHaveLength(0);
 
     const email = `qa+ga4-${Date.now()}@example.com`;
-    const date = hstPlus(8);
     await form.getByLabel('Phone').fill('(808) 555-0142');
     await form.getByLabel('Email').fill(email);
-    await form.getByLabel('Preferred date').fill(date);
-    await form.getByLabel('Preferred time').selectOption('13:30');
     await form.getByLabel(/message/i).fill('Private note: gate code 4321');
+    await page.waitForTimeout(1000);
     const [resp] = await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);
     const body = await resp.json();
     expect(resp.status(), JSON.stringify(body)).toBe(200);
@@ -115,7 +108,7 @@ test.describe('analytics (GA4)', () => {
       ['event', 'showing_request_submitted', { cta_location: 'desktop_header', tour_type: 'in_person' }],
     ]);
     const sent = JSON.stringify(await dataLayer(page)) + JSON.stringify(await page.evaluate(() => (window as Win).__kpEvents));
-    for (const pii of [email, 'Analytics Privacy Tester', '(808) 555-0142', '8085550142', 'gate code', date, body.preferred, body.leadId, 'DUMMY.TOKEN']) {
+    for (const pii of [email, 'Analytics Privacy Tester', '(808) 555-0142', '8085550142', 'gate code', body.leadId, body.eventId, 'DUMMY.TOKEN']) {
       expect(sent, `analytics must not contain ${pii}`).not.toContain(pii);
     }
   });
@@ -137,8 +130,6 @@ test.describe('analytics (GA4)', () => {
     await form.getByLabel('Full name').fill('QA Failure');
     await form.getByLabel('Phone').fill('(808) 555-0142');
     await form.getByLabel('Email').fill(`qa+ga4fail-${Date.now()}@example.com`);
-    await form.getByLabel('Preferred date').fill(hstPlus(9));
-    await form.getByLabel('Preferred time').selectOption('10:00');
     const status = form.locator('[data-form-status]');
     for (const text of ['could not verify', 'could not be saved']) {
       await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);

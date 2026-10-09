@@ -6,11 +6,6 @@ import { test, expect } from './fixtures';
 const PIXEL = '2156903424898652';
 const PROJECTS = ['desktop-1440', 'iphone-webkit', 'android-chromium'];
 const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-const hstPlus = (days: number) => {
-  const d = new Date(Date.now() - 10 * 3600 * 1000);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
 const decode = (s: string) => {
   try {
     return decodeURIComponent(s.replace(/\+/g, ' '));
@@ -19,7 +14,7 @@ const decode = (s: string) => {
   }
 };
 
-type Hit = { ev: string; id: string; cd: Record<string, string>; raw: string };
+type Hit = { ev: string; id: string; eid: string; cd: Record<string, string>; raw: string };
 
 // Hits arrive as GET query strings or as POST bodies (form-encoded or multipart).
 function parseHit(req: Request): Hit {
@@ -33,7 +28,7 @@ function parseHit(req: Request): Hit {
     const m = /^cd\[(.+)\]$/.exec(k);
     if (m) cd[m[1]!] = v;
   });
-  return { ev: params.get('ev') ?? '', id: params.get('id') ?? '', cd, raw: decode(`${url.search}\n${body}`) };
+  return { ev: params.get('ev') ?? '', id: params.get('id') ?? '', eid: params.get('eid') ?? '', cd, raw: decode(`${url.search}\n${body}`) };
 }
 
 async function watchPixel(page: Page): Promise<Hit[]> {
@@ -60,11 +55,17 @@ test.describe('Meta Pixel', () => {
     test.skip(!PROJECTS.includes(info.project.name), 'Meta Pixel checks run on one desktop, one iPhone and one Android setup');
   });
 
-  test('the base code runs once per page and sends one PageView, also after in-page navigation', async ({ page }) => {
+  test('the base code runs once per page and sends one PageView, also after in-page navigation', async ({ page }, info) => {
     const blocked: string[] = [];
+    const elsewhere: string[] = [];
     page.on('console', (m) => {
       const t = m.text();
-      if (/Content Security Policy/i.test(t) && !/Report Only/i.test(t)) blocked.push(t.slice(0, 200));
+      if (!/Content Security Policy/i.test(t) || /Report Only/i.test(t)) return;
+      // Since Oct 2026 fbevents.js also calls endpoints on generic cloud hosts (*.run.app, *.on.aws). The policy keeps
+      // blocking those on purpose; only a blocked Meta host would break the pixel. The first URL is the blocked one.
+      const url = /https?:\/\/[^\s'"]+/.exec(t)?.[0] ?? '';
+      if (/^https?:\/\/([^/]+\.)?(facebook\.(com|net)|fbcdn\.net)(\/|$)/i.test(url) || !url) blocked.push(t.slice(0, 200));
+      else elsewhere.push(t.slice(0, 200));
     });
     const hits = await watchPixel(page);
     await page.goto('/');
@@ -87,6 +88,7 @@ test.describe('Meta Pixel', () => {
     expect(named(hits, 'PageView'), 'no second PageView for in-page navigation').toHaveLength(1);
     expect([...new Set(hits.map((h) => h.ev))], 'automatic events are off: only the PageView so far').toEqual(['PageView']);
     expect(blocked, 'the security policy allows the pixel').toEqual([]);
+    if (elsewhere.length) info.annotations.push({ type: 'csp-blocked (non-Meta host)', description: elsewhere.join('\n') });
   });
 
   test('a PageView is sent on the privacy notice too', async ({ page }) => {
@@ -109,13 +111,14 @@ test.describe('Meta Pixel', () => {
       }),
     );
     const leadId = 'KP-000000-PIXELQA';
+    const eventId = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b';
     let posts = 0;
     await page.route('**/api/showing-request', (r) => {
       posts++;
       return r.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true, leadId, notified: true, preferred: 'Monday · 10:00 AM HST', alternate: '', flexible: false, tourType: 'in_person' }),
+        body: JSON.stringify({ ok: true, leadId, eventId, notified: true, preferred: '', alternate: '', flexible: false, tourType: 'in_person' }),
       });
     });
 
@@ -136,11 +139,8 @@ test.describe('Meta Pixel', () => {
     expect(named(hits, 'Lead'), 'opening, starting or failing the form is not a lead').toHaveLength(0);
 
     const email = `qa+pixel-${Date.now()}@example.com`;
-    const date = hstPlus(8);
     await form.getByLabel('Phone').fill('(808) 555-0142');
     await form.getByLabel('Email').fill(email);
-    await form.getByLabel('Preferred date').fill(date);
-    await form.getByLabel('Preferred time').selectOption('10:00');
     await form.getByLabel(/message/i).fill('Private note: gate code 4321');
     await submit.click();
     await expect(page.locator('#showing-dialog')).toBeVisible();
@@ -150,8 +150,9 @@ test.describe('Meta Pixel', () => {
     expect(named(hits, 'Lead'), 'exactly one Lead per stored request').toHaveLength(1);
     const lead = named(hits, 'Lead')[0]!;
     expect(lead.id).toBe(PIXEL);
+    expect(lead.eid, 'the server sends the same event ID to the Conversions API, so Meta keeps one Lead').toBe(eventId);
     expect(lead.cd).toMatchObject({ content_name: 'Request Private Showing', cta_location: 'hero', tour_type: 'in_person' });
-    for (const pii of ['Pixel Privacy Tester', email, '555-0142', '8085550142', 'gate code', date, leadId]) {
+    for (const pii of ['Pixel Privacy Tester', email, '555-0142', '8085550142', 'gate code', leadId]) {
       expect(lead.raw, `the Lead must not carry ${pii} in plain text`).not.toContain(pii);
     }
     expect([...new Set(hits.map((h) => h.ev))].sort()).toEqual(['Lead', 'PageView']);

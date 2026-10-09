@@ -1,5 +1,7 @@
 import { execSync } from 'child_process';
-import type { Page } from '@playwright/test';
+import { createHmac } from 'crypto';
+import { existsSync, readFileSync } from 'fs';
+import type { APIRequestContext, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
 type KpWindow = Window & { __kpEvents?: { event: string; params: Record<string, unknown> }[] };
@@ -12,14 +14,20 @@ const hstPlus = (days: number) => {
 const uniqueEmail = (tag: string) => process.env.E2E_VISITOR_EMAIL ?? `qa+${tag}-${Date.now()}@example.com`;
 const SUBMIT = /send showing request/i;
 
-// Reads the stored CTA origin from the local D1 database (local runs only; deployed runs check via wrangler --remote).
+// Reads a stored row from the local D1 database (local runs only; deployed runs check via wrangler --remote).
+function storedRow(where: string): Record<string, unknown> | null | undefined {
+  if (process.env.BASE_URL) return undefined;
+  const out = execSync(`npx wrangler d1 execute kaloli-leads --local --json --command "SELECT * FROM showing_requests WHERE ${where}"`, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  return JSON.parse(out)[0]?.results?.[0] ?? null;
+}
+
 function storedOrigin(leadId: string): string | null | undefined {
-  if (process.env.BASE_URL || !/^KP-\d{6}-[0-9A-Z]{6}$/.test(leadId)) return undefined;
-  const out = execSync(
-    `npx wrangler d1 execute kaloli-leads --local --json --command "SELECT cta_origin FROM showing_requests WHERE id = '${leadId}'"`,
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
-  );
-  return JSON.parse(out)[0]?.results?.[0]?.cta_origin ?? null;
+  if (!/^KP-\d{6}-[0-9A-Z]{6}$/.test(leadId)) return undefined;
+  const row = storedRow(`id = '${leadId}'`);
+  return row === undefined ? undefined : ((row?.cta_origin as string | null) ?? null);
 }
 
 // Each test gets its own client IP so the per-IP rate limit doesn't couple tests (Cloudflare overwrites this header in production).
@@ -28,14 +36,14 @@ async function isolateIp(page: Page) {
   await page.route('**/api/showing-request', (route) => route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip } }));
 }
 
-async function fillValid(page: Page, email: string) {
+async function fillValid(page: Page, email: string, { phone = '(808) 555-0142' } = {}) {
   const form = page.locator('#showing-form');
   await form.scrollIntoViewIfNeeded();
   await form.getByLabel('Full name').fill('Peyman QA Tester');
-  await form.getByLabel('Phone').fill('(808) 555-0142');
   await form.getByLabel('Email').fill(email);
-  await form.getByLabel('Preferred date').fill(hstPlus(7));
-  await form.getByLabel('Preferred time').selectOption('10:00');
+  if (phone) await form.getByLabel('Phone').fill(phone);
+  // Three fields fill faster than a person types; below 800 ms the API answers with a decoy (isLikelyBot).
+  await page.waitForTimeout(1000);
   return form;
 }
 
@@ -45,40 +53,47 @@ test.describe('showing form', () => {
     test.skip(!['desktop-1440', 'mobile-390', 'webkit-desktop'].includes(info.project.name), 'form flow runs on representative projects');
   });
 
-  test('validates required fields with an accessible summary', async ({ page }) => {
+  test('asks only for a name and an email, with an accessible summary', async ({ page }) => {
     await page.goto('/#showing');
     const form = page.locator('#showing-form');
+    await expect(form.locator('input[type="date"], select, input[type="checkbox"]'), 'no dates, times or tick boxes').toHaveCount(0);
+    await expect(form.locator('[required]')).toHaveCount(2);
     await form.getByRole('button', { name: SUBMIT }).click();
     const summary = form.locator('[data-error-summary]');
     await expect(summary).toBeVisible();
     await expect(summary).toBeFocused();
-    for (const label of ['Full name', 'Phone', 'Email', 'Preferred date', 'Preferred time']) {
+    for (const label of ['Full name', 'Email']) {
       await expect(form.getByLabel(label)).toHaveAttribute('aria-invalid', 'true');
     }
+    await expect(form.getByLabel('Phone'), 'the phone number is optional').not.toHaveAttribute('aria-invalid', 'true');
+    await expect(form.getByLabel(/message/i)).toHaveAccessibleDescription(/preferred days or times/i);
     await form.getByLabel('Email').fill('not-an-email');
     await form.getByRole('button', { name: SUBMIT }).click();
     await expect(form.locator('#e-email')).toHaveText('Enter a valid email address.');
   });
 
-  test('alternative time must come with a date', async ({ page }) => {
+  test('a phone number is optional, but one that is given must be complete', async ({ page }) => {
+    await isolateIp(page);
     await page.goto('/#showing');
-    const form = await fillValid(page, uniqueEmail('alt'));
-    await form.locator('summary').click();
-    await form.getByLabel('Alternative time').selectOption('14:00');
+    const form = await fillValid(page, uniqueEmail('nophone'), { phone: '555' });
     await form.getByRole('button', { name: SUBMIT }).click();
-    await expect(form.locator('#e-adate')).toContainText('Choose a date for your alternative time.');
+    await expect(form.locator('#e-phone')).toHaveText('Enter a full phone number with area code, or leave it blank.');
+    await form.getByLabel('Phone').fill('');
+    await page.waitForTimeout(1000);
+    const [resp] = await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);
+    const body = await resp.json();
+    expect(resp.status(), JSON.stringify(body)).toBe(200);
+    await expect(page.locator('#showing-dialog')).toBeVisible();
+    const row = storedRow(`id = '${body.leadId}'`);
+    if (row !== undefined) expect(row).toMatchObject({ phone: '', preferred_date: '', source: 'website' });
   });
 
   test('submits, stores the lead and never claims a confirmed showing', async ({ page }) => {
     await isolateIp(page);
     await page.goto('/?utm_source=meta&utm_medium=paid_social&utm_campaign=qa_launch&fbclid=QA123');
     const form = await fillValid(page, uniqueEmail('ok'));
-    await form.locator('summary').click();
-    await form.getByLabel('Alternative date').fill(hstPlus(9));
-    await form.getByLabel('Alternative time').selectOption('15:30');
     await form.getByLabel('Live video tour').check();
-    await form.getByLabel(/i'm flexible/i).check();
-    await form.getByLabel(/message/i).fill('QA automated test — please ignore.');
+    await form.getByLabel(/message/i).fill('QA automated test — please ignore. Weekday mornings suit me.');
     const [resp] = await Promise.all([
       page.waitForResponse('**/api/showing-request'),
       form.getByRole('button', { name: SUBMIT }).click(),
@@ -86,16 +101,16 @@ test.describe('showing form', () => {
     const body = await resp.json();
     expect(resp.status(), JSON.stringify(body)).toBe(200);
     expect(body.leadId).toMatch(/^KP-\d{6}-[0-9A-Z]{6}$/);
+    expect(body.eventId, 'a random Meta event ID, not the lead ID').toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 
     const dialog = page.locator('#showing-dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('#dlg-title')).toBeFocused();
     await expect(dialog).toContainText('Thank you');
     await expect(dialog).toContainText('Your showing request has been sent to the listing agent.');
-    await expect(dialog).toContainText('will contact you directly by phone to confirm the date and time based on availability');
+    await expect(dialog).toContainText('will contact you directly to arrange a time, based on availability');
     await expect(dialog.locator('[data-dlg-warning]')).toHaveText(/not confirmed until the listing agent speaks with you/i);
-    await expect(dialog).toContainText(body.preferred);
-    await expect(dialog).toContainText(body.alternate);
+    await expect(dialog).not.toContainText('Requested');
     await expect(dialog).toContainText('Live video tour');
     await expect(dialog).toContainText(body.leadId);
     await expect(dialog).not.toContainText(/\b(booked|reserved)\b/i);
@@ -129,10 +144,8 @@ test.describe('showing form', () => {
     const form = sheet.locator('#showing-form');
     await expect(form).toBeVisible();
     await form.getByLabel('Full name').fill('Peyman QA Tester');
-    await form.getByLabel('Phone').fill('(808) 555-0142');
     await form.getByLabel('Email').fill(uniqueEmail('sheet'));
-    await form.getByLabel('Preferred date').fill(hstPlus(6));
-    await form.getByLabel('Preferred time').selectOption('11:00');
+    await page.waitForTimeout(1000);
     const [resp] = await Promise.all([page.waitForResponse('**/api/showing-request'), form.getByRole('button', { name: SUBMIT }).click()]);
     const body = await resp.json();
     expect(resp.status(), JSON.stringify(body)).toBe(200);
@@ -210,7 +223,7 @@ test.describe('showing API', () => {
   });
 
   test('requires a Turnstile token of sane size before anything is stored', async ({ request, baseURL }) => {
-    const base = { name: 'QA Person', phone: '8085550142', email: `qa+len-${Date.now()}@example.com`, preferredDate: hstPlus(5), preferredTime: '10:00' };
+    const base = { name: 'QA Person', phone: '8085550142', email: `qa+len-${Date.now()}@example.com` };
     for (const turnstileToken of [undefined, '', 'x'.repeat(2049)]) {
       const res = await request.post('/api/showing-request', { data: { ...base, turnstileToken }, headers: { Origin: baseURL! } });
       expect(res.status(), `token length ${turnstileToken?.length ?? 'none'}`).toBe(400);
@@ -233,15 +246,129 @@ test.describe('showing API', () => {
     } else {
       expect(invalid.status()).toBe(422);
       const errs = (await invalid.json()).errors;
+      // Pages loaded before the form lost its date fields still send them, so they are still checked when present.
       expect(Object.keys(errs)).toEqual(expect.arrayContaining(['name', 'phone', 'email', 'preferredDate', 'preferredTime']));
     }
     // Locally the Turnstile test secret accepts any token, so only deployed environments can prove rejection.
     if (process.env.BASE_URL) {
       const badToken = await request.post('/api/showing-request', {
-        data: { name: 'QA Person', phone: '8085550142', email: `qa+tok-${Date.now()}@example.com`, preferredDate: hstPlus(5), preferredTime: '10:00', turnstileToken: 'invalid-token' },
+        data: { name: 'QA Person', email: `qa+tok-${Date.now()}@example.com`, turnstileToken: 'invalid-token' },
         headers: { Origin: baseURL! },
       });
       expect(badToken.status()).toBe(403);
     }
+  });
+
+  test('a request from a page loaded before the form changed is still accepted', async ({ request, baseURL }) => {
+    test.skip(!!process.env.BASE_URL, 'stores a lead');
+    const res = await request.post('/api/showing-request', {
+      data: {
+        name: 'QA Legacy Page',
+        phone: '8085550142',
+        email: `qa+legacy-${Date.now()}@example.com`,
+        preferredDate: hstPlus(5),
+        preferredTime: '10:00',
+        flexible: true,
+        turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
+        elapsedMs: 9000,
+      },
+      headers: { Origin: baseURL!, 'cf-connecting-ip': `10.9.${(Math.random() * 250) | 0}.${(Math.random() * 250) | 0}` },
+    });
+    const body = await res.json();
+    expect(res.status(), JSON.stringify(body)).toBe(200);
+    expect(body.preferred).toMatch(/10:00 AM HST$/);
+    expect(storedRow(`id = '${body.leadId}'`)).toMatchObject({ preferred_time: '10:00', flexible: 1 });
+  });
+});
+
+// The Google Sheet that collects Meta lead-form leads forwards new rows here (tools/meta-lead-sync/Code.gs).
+const LOCAL_SYNC_SECRET = existsSync('.dev.vars') ? (/^SHEET_SYNC_SECRET="?([^"\r\n]*)"?\s*$/m.exec(readFileSync('.dev.vars', 'utf8'))?.[1] ?? '') : '';
+
+function signedPost(request: APIRequestContext, payload: unknown, { secret = LOCAL_SYNC_SECRET, ts = Math.floor(Date.now() / 1000) } = {}) {
+  const body = JSON.stringify(payload);
+  const sig = createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');
+  return request.post('/api/meta-leads', {
+    data: body,
+    headers: { 'Content-Type': 'application/json', 'X-KP-Timestamp': String(ts), 'X-KP-Signature': sig },
+  });
+}
+
+const metaRow = (id: string, values: Record<string, string> = {}) => ({
+  key: `l:${id}`,
+  row: 2,
+  values: {
+    id: `l:${id}`,
+    created_time: '2026-10-09T05:17:11-05:00',
+    ad_id: 'ag:120000000000000001',
+    ad_name: 'KaloliUGCVideo',
+    adset_id: 'as:120000000000000002',
+    adset_name: 'KaloliUGCVideo',
+    campaign_id: 'c:120000000000000003',
+    campaign_name: 'Hawaii House Sale - Lead Optimization',
+    form_id: 'f:2282031765894403',
+    form_name: 'book a showing form',
+    is_organic: 'false',
+    platform: 'ig',
+    email: `qa+meta-${id}@example.com`,
+    full_name: 'Meta QA Tester',
+    phone: 'p:+18085550199',
+    lead_status: 'CREATED',
+    ...values,
+  },
+});
+
+test.describe('Meta lead-form leads from the Google Sheet', () => {
+  test.beforeEach(({}, info) => {
+    test.skip(!!process.env.BASE_URL, 'stores leads and needs the local sync key');
+    test.skip(info.project.name !== 'desktop-1440', 'API checks run once');
+  });
+
+  test('a signed row is stored once, the listing agent is notified, and a repeat is ignored', async ({ request }) => {
+    const id = String(Date.now());
+    const payload = { source: 'meta_lead_form', sheet: 'Sheet1', rows: [metaRow(id, { 'when_would_you_like_to_visit?': 'Next week' })] };
+    const first = await signedPost(request, payload);
+    const out = await first.json();
+    expect(first.status(), JSON.stringify(out)).toBe(200);
+    expect(out.results).toEqual([expect.objectContaining({ key: `l:${id}`, status: 'inserted', notified: true })]);
+    const row = storedRow(`external_id = '${id}'`);
+    expect(row).toMatchObject({
+      source: 'meta_lead_form',
+      name: 'Meta QA Tester',
+      email: `qa+meta-${id}@example.com`,
+      phone: '+18085550199',
+      utm_source: 'instagram',
+      utm_medium: 'lead_form',
+      utm_campaign: 'Hawaii House Sale - Lead Optimization',
+      cta_origin: 'meta_lead_form',
+      status: 'notified',
+      is_test: 0,
+      visitor_email_status: null,
+    });
+    expect(JSON.parse(String(row!.source_details))).toMatchObject({ form_name: 'book a showing form', answers: { 'when would you like to visit?': 'Next week' } });
+
+    const again = await signedPost(request, payload);
+    expect((await again.json()).results).toEqual([expect.objectContaining({ status: 'duplicate', leadId: out.results[0].leadId })]);
+  });
+
+  test("Meta's dummy test leads are marked as tests, and rows that are not leads are skipped", async ({ request }) => {
+    const id = String(Date.now() + 1);
+    const res = await signedPost(request, {
+      source: 'meta_lead_form',
+      rows: [
+        metaRow(id, { email: 'test@meta.com', full_name: '<test lead: dummy data for full_name>', phone: 'p:<test lead: dummy data for phone>' }),
+        { key: 'note-row', values: { lead_status: 'note typed into the sheet' } },
+      ],
+    });
+    const out = await res.json();
+    expect(out.results.map((r: { status: string }) => r.status)).toEqual(['inserted', 'skipped']);
+    expect(storedRow(`external_id = '${id}'`)).toMatchObject({ is_test: 1, source: 'meta_lead_form' });
+  });
+
+  test('unsigned, wrongly signed or stale requests are refused', async ({ request }) => {
+    const payload = { source: 'meta_lead_form', rows: [metaRow(String(Date.now() + 2))] };
+    expect((await request.post('/api/meta-leads', { data: payload })).status()).toBe(401);
+    expect((await signedPost(request, payload, { secret: 'not-the-secret' })).status()).toBe(401);
+    expect((await signedPost(request, payload, { ts: Math.floor(Date.now() / 1000) - 3600 })).status()).toBe(401);
+    expect((await request.get('/api/meta-leads')).status()).toBe(405);
   });
 });

@@ -21,7 +21,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 if (!ISO.test(from) || !ISO.test(to) || !/^[\w-]+$/.test(site.d1.database)) throw new Error('unsafe query input');
 
 const sql =
-  'SELECT id, created_at, is_test, status, tour_type, cta_origin, utm_source, utm_medium, utm_campaign, utm_content, utm_term, ' +
+  'SELECT id, created_at, is_test, status, tour_type, cta_origin, source, utm_source, utm_medium, utm_campaign, utm_content, utm_term, ' +
   "CASE WHEN fbclid IS NULL OR fbclid = '' THEN 0 ELSE 1 END AS has_fbclid, referrer, landing_page " +
   `FROM showing_requests WHERE created_at >= '${from}' AND created_at < '${to}' ORDER BY created_at`;
 

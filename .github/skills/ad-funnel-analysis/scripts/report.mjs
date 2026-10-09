@@ -421,7 +421,7 @@ table(
   ['Received', 'Tour type', 'Button', 'Attributed to', 'Visit seen by the website'],
   m.leads.rows.map((r) => [
     zonedLabel(Date.parse(r.created_at), m.run.metaTimezone),
-    r.tour_type === 'video' ? 'virtual (video)' : 'in person',
+    r.source === 'meta_lead_form' ? 'Meta lead form' : r.tour_type === 'video' ? 'virtual (video)' : 'in person',
     r.cta_origin ?? '–',
     r.attribution ?? '–',
     r.visit

@@ -3,6 +3,7 @@ import { agentEmail, sendEmail, visitorEmail } from './email';
 
 // Only states this website can observe. Offline outcomes (contacted, confirmed, attended, cancelled) are never set here.
 export type LeadStatus = 'new' | 'notified' | 'notification_failed';
+export type LeadSource = 'website' | 'meta_lead_form';
 
 export interface LeadRecord {
   id: string;
@@ -38,6 +39,50 @@ export interface LeadRecord {
   last_notification_error: string | null;
   visitor_email_status: 'sent' | 'failed' | null;
   visitor_email_id: string | null;
+  source: LeadSource;
+  external_id: string | null;
+  source_details: string | null;
+}
+
+// Phone and requested times are optional ('' when absent: the columns predate that and are NOT NULL).
+export function leadRecord(fields: Pick<LeadRecord, 'id' | 'name' | 'email'> & Partial<LeadRecord>): LeadRecord {
+  const now = new Date().toISOString();
+  return {
+    created_at: now,
+    updated_at: now,
+    phone: '',
+    preferred_date: '',
+    preferred_time: '',
+    alternate_date: null,
+    alternate_time: null,
+    flexible: 0,
+    tour_type: 'in_person',
+    message: null,
+    utm_source: null,
+    utm_medium: null,
+    utm_campaign: null,
+    utm_content: null,
+    utm_term: null,
+    gclid: null,
+    fbclid: null,
+    ttclid: null,
+    referrer: null,
+    landing_page: null,
+    cta_origin: null,
+    status: 'new',
+    is_test: 0,
+    ip_hash: null,
+    notification_attempts: 0,
+    notified_at: null,
+    agent_email_id: null,
+    last_notification_error: null,
+    visitor_email_status: null,
+    visitor_email_id: null,
+    source: 'website',
+    external_id: null,
+    source_details: null,
+    ...fields,
+  };
 }
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -75,17 +120,14 @@ export async function recentCounts(env: Env, ipHash: string | null, email: strin
 }
 
 export async function insertLead(env: Env, req: ShowingRequest, meta: { id: string; ipHash: string | null; isTest: boolean }): Promise<LeadRecord> {
-  const now = new Date().toISOString();
   const a = req.attribution ?? {};
-  const lead: LeadRecord = {
+  const lead = leadRecord({
     id: meta.id,
-    created_at: now,
-    updated_at: now,
     name: req.name,
-    phone: req.phone,
+    phone: req.phone ?? '',
     email: req.email,
-    preferred_date: req.preferredDate,
-    preferred_time: req.preferredTime,
+    preferred_date: req.preferredDate ?? '',
+    preferred_time: req.preferredTime ?? '',
     alternate_date: req.alternateDate ?? null,
     alternate_time: req.alternateTime ?? null,
     flexible: req.flexible ? 1 : 0,
@@ -102,31 +144,29 @@ export async function insertLead(env: Env, req: ShowingRequest, meta: { id: stri
     referrer: a.referrer || null,
     landing_page: a.landing_page || null,
     cta_origin: req.ctaOrigin ?? null,
-    status: 'new',
     is_test: meta.isTest ? 1 : 0,
     ip_hash: meta.ipHash,
-    notification_attempts: 0,
-    notified_at: null,
-    agent_email_id: null,
-    last_notification_error: null,
-    visitor_email_status: null,
-    visitor_email_id: null,
-  };
+  });
+  await storeLead(env, lead);
+  return lead;
+}
+
+export async function storeLead(env: Env, lead: LeadRecord): Promise<void> {
   await env.DB.prepare(
     `INSERT INTO showing_requests (
       id, created_at, updated_at, name, phone, email, preferred_date, preferred_time, alternate_date, alternate_time,
       flexible, tour_type, message, utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid, fbclid, ttclid,
-      referrer, landing_page, status, is_test, ip_hash, cta_origin
-    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)`,
+      referrer, landing_page, status, is_test, ip_hash, cta_origin, source, external_id, source_details
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27,
+      ?28, ?29, ?30)`,
   )
     .bind(
       lead.id, lead.created_at, lead.updated_at, lead.name, lead.phone, lead.email, lead.preferred_date, lead.preferred_time,
       lead.alternate_date, lead.alternate_time, lead.flexible, lead.tour_type, lead.message, lead.utm_source, lead.utm_medium,
       lead.utm_campaign, lead.utm_content, lead.utm_term, lead.gclid, lead.fbclid, lead.ttclid, lead.referrer, lead.landing_page,
-      lead.status, lead.is_test, lead.ip_hash, lead.cta_origin,
+      lead.status, lead.is_test, lead.ip_hash, lead.cta_origin, lead.source, lead.external_id, lead.source_details,
     )
     .run();
-  return lead;
 }
 
 // Attempts the listing-agent notification and records only the observable outcome. Leads are never deleted here.
@@ -159,7 +199,8 @@ export async function notifyLead(env: Env, lead: LeadRecord): Promise<boolean> {
   }
 
   // The visitor is told the request was received only after the agent notification succeeded.
-  if (lead.status === 'notified' && !lead.visitor_email_status) {
+  // People who used a Meta lead form already saw Meta's own confirmation, so they get no website email.
+  if (lead.status === 'notified' && !lead.visitor_email_status && (lead.source ?? 'website') === 'website') {
     const v = await sendEmail(env, visitorEmail(env, lead), `${lead.id}-visitor`);
     lead.visitor_email_status = v.id ? 'sent' : 'failed';
     lead.visitor_email_id = v.id ?? null;

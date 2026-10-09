@@ -1,14 +1,7 @@
 ---
-import { Check, ChevronDown, Phone, X } from '@lucide/astro';
+import { Phone, X } from '@lucide/astro';
 import { property } from '../data/property';
 
-const slots: { value: string; label: string }[] = [];
-for (let m = 9 * 60; m <= 17 * 60 + 30; m += 30) {
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  const h12 = ((h + 11) % 12) + 1;
-  slots.push({ value: `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, label: `${h12}:${String(mm).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` });
-}
 const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const a = property.agent;
 ---
@@ -20,11 +13,11 @@ const a = property.agent;
       <p class="eyebrow">Private showings</p>
       <h2 class="display display--lg" id="showing-title">Experience the Residence <em>in Person.</em></h2>
       <p class="intro">
-        Request a private showing of {property.address.streetDisplay}. It takes about thirty seconds.
+        Request a private showing or a live video tour of {property.address.streetDisplay}. It takes about fifteen seconds.
       </p>
       <ol class="steps" role="list">
-        <li><span class="n">1</span><span>Choose a preferred day and time in Hawaiʻi Standard Time.</span></li>
-        <li><span class="n">2</span><span>The listing agent contacts you about availability.</span></li>
+        <li><span class="n">1</span><span>Send your name and email; a phone number is optional.</span></li>
+        <li><span class="n">2</span><span>The listing agent contacts you to arrange a time.</span></li>
         <li><span class="n">3</span><span>The showing is confirmed only after you and the agent speak.</span></li>
       </ol>
     </div>
@@ -48,35 +41,16 @@ const a = property.agent;
           </div>
 
           <div class="field">
-            <label for="f-phone">Phone</label>
-            <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="30" aria-describedby="e-phone" />
-            <p class="error" id="e-phone" data-error-for="phone"></p>
-          </div>
-
-          <div class="field">
             <label for="f-email">Email</label>
             <input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" required maxlength="254" aria-describedby="e-email" />
             <p class="error" id="e-email" data-error-for="email"></p>
           </div>
 
           <div class="field">
-            <label for="f-date">Preferred date</label>
-            <input id="f-date" name="preferredDate" type="date" required aria-describedby="e-date h-tz" data-date-input />
-            <p class="error" id="e-date" data-error-for="preferredDate"></p>
+            <label for="f-phone">Phone <span class="opt">(optional)</span></label>
+            <input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" aria-describedby="e-phone" />
+            <p class="error" id="e-phone" data-error-for="phone"></p>
           </div>
-
-          <div class="field">
-            <label for="f-time">Preferred time</label>
-            <div class="select">
-              <select id="f-time" name="preferredTime" required aria-describedby="e-time h-tz">
-                <option value="">Select a time</option>
-                {slots.map((s) => <option value={s.value}>{s.label}</option>)}
-              </select>
-              <ChevronDown aria-hidden="true" />
-            </div>
-            <p class="error" id="e-time" data-error-for="preferredTime"></p>
-          </div>
-          <p class="hint span-2" id="h-tz">All times are Hawaiʻi Standard Time (HST).</p>
 
           <fieldset class="field span-2 tour" aria-describedby="h-remote">
             <legend>Showing type</legend>
@@ -87,37 +61,10 @@ const a = property.agent;
             </div>
           </fieldset>
 
-          <details class="span-2 alt" data-alt>
-            <summary>Add an alternative time <span class="opt">(optional)</span></summary>
-            <div class="alt-fields">
-              <div class="field">
-                <label for="f-adate">Alternative date</label>
-                <input id="f-adate" name="alternateDate" type="date" aria-describedby="e-adate" data-date-input />
-                <p class="error" id="e-adate" data-error-for="alternateDate"></p>
-              </div>
-              <div class="field">
-                <label for="f-atime">Alternative time</label>
-                <div class="select">
-                  <select id="f-atime" name="alternateTime" aria-describedby="e-atime">
-                    <option value="">Select a time</option>
-                    {slots.map((s) => <option value={s.value}>{s.label}</option>)}
-                  </select>
-                  <ChevronDown aria-hidden="true" />
-                </div>
-                <p class="error" id="e-atime" data-error-for="alternateTime"></p>
-              </div>
-            </div>
-          </details>
-
-          <label class="check span-2">
-            <input type="checkbox" name="flexible" value="1" />
-            <span class="box" aria-hidden="true"><Check /></span>
-            <span>I'm flexible — any time that suits the listing agent works for me.</span>
-          </label>
-
           <div class="field span-2">
             <label for="f-message">Message <span class="opt">(optional)</span></label>
-            <textarea id="f-message" name="message" rows="3" maxlength="1000" aria-describedby="e-message"></textarea>
+            <p class="field-hint" id="h-message">Preferred days or times, or any questions for the listing agent.</p>
+            <textarea id="f-message" name="message" rows="3" maxlength="1000" aria-describedby="h-message e-message"></textarea>
             <p class="error" id="e-message" data-error-for="message"></p>
           </div>
 
@@ -155,7 +102,7 @@ const a = property.agent;
         </button>
       </div>
       <p class="sheet-intro" id="sheet-intro">
-        Choose a preferred day and time (Hawaiʻi time). {a.name} will call you to confirm, based on availability.
+        Your name and email are all we need. {a.name} will contact you to arrange a time, based on availability.
       </p>
       <div class="sheet-slot" data-sheet-slot></div>
     </div>
@@ -224,7 +171,7 @@ const a = property.agent;
     color: var(--charcoal);
   }
   .opt { font-weight: 400; letter-spacing: 0.06em; text-transform: none; color: var(--moss-deep); }
-  input[type='text'], input[type='tel'], input[type='email'], input[type='date'], select, textarea {
+  input[type='text'], input[type='tel'], input[type='email'], textarea {
     width: 100%;
     min-height: 3.1rem;
     padding: 0.8rem 0.9rem;
@@ -237,21 +184,16 @@ const a = property.agent;
     -webkit-appearance: none;
     appearance: none;
   }
-  input[type='date'] { line-height: 1.3; }
-  input::-webkit-date-and-time-value { text-align: left; }
   textarea { resize: vertical; min-height: 6rem; }
-  input:focus-visible, select:focus-visible, textarea:focus-visible {
+  input:focus-visible, textarea:focus-visible {
     outline: none;
     border-color: var(--forest);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest) 25%, transparent);
   }
   [aria-invalid='true'] { border-color: #9b2c1f !important; }
-  .select { position: relative; }
-  .select select { padding-right: 2.5rem; cursor: pointer; }
-  .select :global(svg) { position: absolute; right: 0.9rem; top: 50%; width: 1rem; height: 1rem; transform: translateY(-50%); pointer-events: none; color: var(--moss-deep); }
   .error { min-height: 0; font-size: 0.82rem; color: #9b2c1f; }
   .error:empty { display: none; }
-  .hint { font-size: 0.82rem; color: var(--moss-deep); margin-top: -0.6rem; }
+  .field-hint { font-size: 0.85rem; line-height: 1.45; color: var(--moss-deep); }
 
   .tour { border: 0; padding: 0; margin: 0; }
   .remote { margin-top: 0.35rem; font-size: 0.9rem; line-height: 1.5; color: var(--charcoal); max-width: 52ch; }
@@ -268,38 +210,6 @@ const a = property.agent;
   }
   .choice input:checked + span { background: var(--ink); color: var(--ivory); border-color: var(--ink); }
   .choice input:focus-visible + span { outline: 2px solid var(--bronze-deep); outline-offset: 3px; }
-
-  .alt summary {
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--forest);
-    padding-block: 0.5rem;
-    list-style-position: outside;
-  }
-  .alt-fields { display: grid; gap: 1.25rem; margin-top: 0.9rem; }
-  @media (min-width: 640px) { .alt-fields { grid-template-columns: 1fr 1fr; } }
-
-  .check {
-    display: grid;
-    grid-template-columns: 1.4rem 1fr;
-    gap: 0.8rem;
-    align-items: start;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 400;
-    font-size: 0.95rem;
-    color: var(--charcoal);
-    position: relative;
-    cursor: pointer;
-  }
-  .check input { position: absolute; opacity: 0; width: 1.4rem; height: 1.4rem; margin: 0; cursor: pointer; }
-  .box { width: 1.4rem; height: 1.4rem; border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent); display: grid; place-items: center; color: transparent; }
-  .box :global(svg) { width: 0.95rem; height: 0.95rem; }
-  .check input:checked + .box { background: var(--ink); border-color: var(--ink); color: var(--ivory); }
-  .check input:focus-visible + .box { outline: 2px solid var(--bronze-deep); outline-offset: 3px; }
 
   .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
   .turnstile { margin-top: 1.5rem; min-height: 0; }

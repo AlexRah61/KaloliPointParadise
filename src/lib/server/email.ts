@@ -83,68 +83,136 @@ const row = (k: string, v: string): string =>
 const heading = (t: string): string =>
   `<p style="margin:26px 0 8px;font:600 11px/1.4 Helvetica,Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#7d5f3a;">${esc(t)}</p>`;
 
+// Facts Meta's lead form adds (stored as JSON in source_details).
+interface MetaLeadDetails {
+  lead_id?: string;
+  created_time?: string;
+  campaign_name?: string;
+  adset_name?: string;
+  ad_name?: string;
+  form_name?: string;
+  platform?: string;
+  is_organic?: string;
+  answers?: Record<string, string>;
+}
+
+const PLATFORMS: Record<string, string> = { fb: 'Facebook', ig: 'Instagram', an: 'Audience Network', msg: 'Messenger', wa: 'WhatsApp' };
+
+export function metaDetails(lead: LeadRecord): MetaLeadDetails {
+  if (lead.source !== 'meta_lead_form' || !lead.source_details) return {};
+  try {
+    return JSON.parse(lead.source_details) as MetaLeadDetails;
+  } catch {
+    return {};
+  }
+}
+
+const stampOrRaw = (v: string): string => (Number.isNaN(Date.parse(v)) ? v : hstStamp(v));
+
 export function agentEmail(env: Env, lead: LeadRecord): EmailMessage {
+  const fromMeta = lead.source === 'meta_lead_form';
+  const m = metaDetails(lead);
+  const platform = PLATFORMS[(m.platform ?? '').toLowerCase()] ?? 'Facebook or Instagram';
   const testPrefix = lead.is_test ? '[TEST] ' : '';
   const preferred = slotLabel(lead.preferred_date, lead.preferred_time);
-  const alternate = slotLabel(lead.alternate_date, lead.alternate_time) || '—';
+  const alternate = slotLabel(lead.alternate_date, lead.alternate_time);
   const tour = TOUR_LABEL[lead.tour_type];
   const toAgent = lead.is_test ? [env.LEAD_CC_EMAIL] : [env.LEAD_TO_EMAIL];
   const cc = !lead.is_test && env.LEAD_CC_EMAIL && env.LEAD_CC_EMAIL !== env.LEAD_TO_EMAIL ? [env.LEAD_CC_EMAIL] : [];
-  const telHref = `tel:${lead.phone.replace(/[^\d+]/g, '')}`;
+  const phone = lead.phone.trim();
+  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
+  const answers = Object.entries(m.answers ?? {});
+
+  const banner = fromMeta ? 'Meta lead form — not a booked showing' : 'Showing request — not confirmed';
+  const intro = fromMeta
+    ? `This person filled in the lead form of one of our ${platform} ads${m.campaign_name ? ` (campaign “${m.campaign_name}”)` : ''}. Please contact them to arrange a private or virtual tour. No appointment has been booked.`
+    : 'Please contact the prospect directly to arrange a time. No appointment has been booked.';
+
+  const requestRows = fromMeta
+    ? [
+        row('Platform', esc(platform)),
+        row('Campaign', esc(m.campaign_name || '—')),
+        row('Ad set', esc(m.adset_name || '—')),
+        row('Ad', esc(m.ad_name || '—')),
+        row('Form', esc(m.form_name || '—')),
+        row('Submitted on Meta', esc(m.created_time ? stampOrRaw(m.created_time) : '—')),
+        row('Meta lead ID', esc(m.lead_id || lead.external_id || '—')),
+        ...answers.map(([q, a]) => row(q, esc(a))),
+      ]
+    : [
+        row('Showing type', esc(tour)),
+        ...(preferred ? [row('Preferred', esc(preferred))] : []),
+        ...(alternate ? [row('Alternative', esc(alternate))] : []),
+        ...(lead.flexible ? [row('Flexible', 'Yes — any time that suits the agent')] : []),
+        row('Message', lead.message ? esc(lead.message).replace(/\n/g, '<br>') : '—'),
+      ];
 
   const html = shell(
-    'New showing request',
-    `<div style="padding:14px 16px;background:#30473a;color:#fffdf8;font:700 13px/1.5 Helvetica,Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;">Showing request — not confirmed</div>
-<p style="margin:16px 0 0;">Please contact the prospect directly by phone to confirm availability. No appointment has been booked.</p>
+    fromMeta ? 'New Meta lead' : 'New showing request',
+    `<div style="padding:14px 16px;background:#30473a;color:#fffdf8;font:700 13px/1.5 Helvetica,Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;">${esc(banner)}</div>
+<p style="margin:16px 0 0;">${esc(intro)}</p>
 ${lead.is_test ? '<p style="margin:12px 0 0;padding:10px 12px;background:#fbf1ee;color:#7a2216;font-size:13px;">TEST SUBMISSION — routed to the test recipient only.</p>' : ''}
 ${heading('Prospect')}
 <table role="presentation" cellpadding="0" cellspacing="0">
 ${row('Name', esc(lead.name))}
-${row('Phone', `<a href="${esc(telHref)}" style="color:#30473a;">${esc(lead.phone)}</a>`)}
-${row('Email', `<a href="mailto:${esc(lead.email)}" style="color:#30473a;">${esc(lead.email)}</a>`)}
+${row('Phone', phone ? `<a href="${esc(telHref)}" style="color:#30473a;">${esc(phone)}</a>` : 'Not provided')}
+${row('Email', lead.email ? `<a href="mailto:${esc(lead.email)}" style="color:#30473a;">${esc(lead.email)}</a>` : 'Not provided')}
 </table>
-${heading('Requested showing')}
+${heading(fromMeta ? 'Lead form' : 'Requested showing')}
 <table role="presentation" cellpadding="0" cellspacing="0">
-${row('Preferred', esc(preferred))}
-${row('Alternative', esc(alternate))}
-${row('Flexible', lead.flexible ? 'Yes — any time that suits the agent' : 'No')}
-${row('Showing type', esc(tour))}
-${row('Message', lead.message ? esc(lead.message).replace(/\n/g, '<br>') : '—')}
+${requestRows.join('\n')}
 </table>
 ${heading('Lead')}
 <table role="presentation" cellpadding="0" cellspacing="0">
 ${row('Lead ID', esc(lead.id))}
-${row('Submitted', esc(hstStamp(lead.created_at)))}
+${row(fromMeta ? 'Received' : 'Submitted', esc(hstStamp(lead.created_at)))}
 ${row('Property', `${esc(property.address.full)} · MLS ${esc(property.mls)}`)}
 </table>
-${heading('Marketing attribution')}
+${
+  fromMeta
+    ? ''
+    : `${heading('Marketing attribution')}
 <table role="presentation" cellpadding="0" cellspacing="0">
 ${ATTR_KEYS.map((k) => row(k, esc(lead[k] ?? '—') || '—')).join('\n')}
-</table>
-<p style="margin:26px 0 0;font-size:12px;color:#55614f;">Sent by the property website ${esc(SITE_URL.replace('https://', ''))}. Reply to this email to reach the prospect.</p>`,
+</table>`
+}
+<p style="margin:26px 0 0;font-size:12px;color:#55614f;">Sent by the property website ${esc(SITE_URL.replace('https://', ''))}.${lead.email ? ' Reply to this email to reach the prospect.' : ''}</p>`,
   );
 
+  const requestText = fromMeta
+    ? [
+        `Platform: ${platform}`,
+        `Campaign: ${m.campaign_name || '—'}`,
+        `Ad set: ${m.adset_name || '—'}`,
+        `Ad: ${m.ad_name || '—'}`,
+        `Form: ${m.form_name || '—'}`,
+        `Submitted on Meta: ${m.created_time ? stampOrRaw(m.created_time) : '—'}`,
+        `Meta lead ID: ${m.lead_id || lead.external_id || '—'}`,
+        ...answers.map(([q, a]) => `${q}: ${a}`),
+      ]
+    : [
+        `Showing type: ${tour}`,
+        preferred ? `Preferred: ${preferred}` : '',
+        alternate ? `Alternative: ${alternate}` : '',
+        lead.flexible ? 'Flexible: Yes' : '',
+        `Message: ${lead.message ?? '—'}`,
+      ].filter(Boolean);
+
   const text = [
-    'SHOWING REQUEST — NOT CONFIRMED',
-    'Please contact the prospect directly by phone to confirm availability.',
+    banner.toUpperCase(),
+    intro,
     lead.is_test ? 'TEST SUBMISSION — routed to the test recipient only.' : '',
     '',
     `Name: ${lead.name}`,
-    `Phone: ${lead.phone}`,
-    `Email: ${lead.email}`,
+    `Phone: ${phone || 'Not provided'}`,
+    `Email: ${lead.email || 'Not provided'}`,
     '',
-    `Preferred: ${preferred}`,
-    `Alternative: ${alternate}`,
-    `Flexible: ${lead.flexible ? 'Yes' : 'No'}`,
-    `Showing type: ${tour}`,
-    `Message: ${lead.message ?? '—'}`,
+    ...requestText,
     '',
     `Lead ID: ${lead.id}`,
-    `Submitted: ${hstStamp(lead.created_at)}`,
+    `${fromMeta ? 'Received' : 'Submitted'}: ${hstStamp(lead.created_at)}`,
     `Property: ${property.address.full} · MLS ${property.mls}`,
-    '',
-    'Marketing attribution',
-    ...ATTR_KEYS.map((k) => `${k}: ${lead[k] ?? '—'}`),
+    ...(fromMeta ? [] : ['', 'Marketing attribution', ...ATTR_KEYS.map((k) => `${k}: ${lead[k] ?? '—'}`)]),
   ]
     .filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
     .join('\n');
@@ -153,11 +221,11 @@ ${ATTR_KEYS.map((k) => row(k, esc(lead[k] ?? '—') || '—')).join('\n')}
     from: env.LEAD_FROM_EMAIL,
     to: toAgent,
     cc,
-    reply_to: [lead.email],
-    subject: `${testPrefix}New Showing Request — ${property.address.streetDisplay} — ${headerSafe(lead.name)}`,
+    reply_to: lead.email ? [lead.email] : undefined,
+    subject: `${testPrefix}${fromMeta ? 'New Meta Lead' : 'New Showing Request'} — ${property.address.streetDisplay} — ${headerSafe(lead.name)}`,
     html,
     text,
-    tags: [{ name: 'type', value: 'agent_notification' }],
+    tags: [{ name: 'type', value: fromMeta ? 'meta_lead_notification' : 'agent_notification' }],
   };
 }
 
@@ -167,16 +235,17 @@ export function visitorEmail(env: Env, lead: LeadRecord): EmailMessage {
   const preferred = slotLabel(lead.preferred_date, lead.preferred_time);
   const alternate = slotLabel(lead.alternate_date, lead.alternate_time);
   const replyTo = lead.is_test ? env.LEAD_CC_EMAIL : env.LEAD_TO_EMAIL;
+  const kind = lead.tour_type === 'video' ? 'live video tour' : 'private showing';
 
   const html = shell(
     'Showing request received',
     `<p style="margin:0 0 14px;font:400 30px/1.15 Georgia,'Times New Roman',serif;color:#151815;">Thank you${first ? `, ${esc(first)}` : ''}.</p>
-<p style="margin:0 0 12px;">We received your request for a private showing of ${esc(property.address.streetDisplay)} in ${esc(property.address.neighborhood)}.</p>
-<p style="margin:0 0 12px;">The listing agent, ${esc(a.name)} of ${esc(a.brokerage)}, will contact you to confirm availability.</p>
+<p style="margin:0 0 12px;">We received your request for a ${kind} of ${esc(property.address.streetDisplay)} in ${esc(property.address.neighborhood)}.</p>
+<p style="margin:0 0 12px;">The listing agent, ${esc(a.name)} of ${esc(a.brokerage)}, will contact you to arrange a time.</p>
 <div style="margin:18px 0;padding:14px 16px;background:#151815;color:#fffdf8;font:700 12px/1.5 Helvetica,Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;">Your showing is not confirmed until the listing agent speaks with you.</div>
 ${heading('Your request')}
 <table role="presentation" cellpadding="0" cellspacing="0">
-${row('Requested', esc(preferred))}
+${preferred ? row('Requested', esc(preferred)) : ''}
 ${alternate ? row('Alternative', esc(alternate)) : ''}
 ${row('Showing type', esc(TOUR_LABEL[lead.tour_type]))}
 ${lead.flexible ? row('Flexible', 'Yes') : ''}
@@ -192,12 +261,12 @@ ${heading('Listing agent')}
   const text = [
     `Thank you${first ? `, ${first}` : ''}.`,
     '',
-    `We received your request for a private showing of ${property.address.streetDisplay} in ${property.address.neighborhood}.`,
-    `The listing agent, ${a.name} of ${a.brokerage}, will contact you to confirm availability.`,
+    `We received your request for a ${kind} of ${property.address.streetDisplay} in ${property.address.neighborhood}.`,
+    `The listing agent, ${a.name} of ${a.brokerage}, will contact you to arrange a time.`,
     '',
     'YOUR SHOWING IS NOT CONFIRMED UNTIL THE LISTING AGENT SPEAKS WITH YOU.',
     '',
-    `Requested: ${preferred}`,
+    preferred ? `Requested: ${preferred}` : '',
     alternate ? `Alternative: ${alternate}` : '',
     `Showing type: ${TOUR_LABEL[lead.tour_type]}`,
     `Reference: ${lead.id}`,

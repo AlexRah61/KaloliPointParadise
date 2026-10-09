@@ -1,6 +1,6 @@
 import { track } from './analytics';
 import { getAttribution } from './attribution';
-import { addDays, hstToday, isIsoDate, isLikelyBot, MAX_DAYS_AHEAD, phoneDigits, TOUR_LABEL, TURNSTILE_ACTION } from '../lib/showing-shared';
+import { isLikelyBot, phoneDigits, TOUR_LABEL, TURNSTILE_ACTION } from '../lib/showing-shared';
 
 declare global {
   interface Window {
@@ -19,6 +19,8 @@ interface ApiOk {
   ok: true;
   leadId: string;
   notified: boolean;
+  // Shared with the server's Conversions API copy of the Lead so Meta counts one conversion.
+  eventId?: string;
   preferred: string;
   alternate: string;
   flexible: boolean;
@@ -29,10 +31,6 @@ const LABELS: Record<string, string> = {
   name: 'Full name',
   phone: 'Phone',
   email: 'Email',
-  preferredDate: 'Preferred date',
-  preferredTime: 'Preferred time',
-  alternateDate: 'Alternative date',
-  alternateTime: 'Alternative time',
   message: 'Message',
 };
 
@@ -53,13 +51,6 @@ export function initShowingForm(): void {
   const siteKey = form.dataset.sitekey ?? '';
   const defaultLabel = submitLabel.textContent ?? '';
   let opener: HTMLElement | null = null;
-
-  const today = hstToday();
-  const max = addDays(today, MAX_DAYS_AHEAD);
-  form.querySelectorAll<HTMLInputElement>('[data-date-input]').forEach((i) => {
-    i.min = today;
-    i.max = max;
-  });
 
   // ---- analytics: first interaction ----
   let startedAt = 0;
@@ -220,20 +211,11 @@ export function initShowingForm(): void {
     const errors: FieldErrors = {};
     const name = value('name');
     if (name.length < 2) errors.name = 'Enter your full name.';
-    const digits = phoneDigits(value('phone'));
-    if (digits.length < 10 || digits.length > 15) errors.phone = 'Enter a phone number the agent can call, including area code.';
     const email = value('email');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Enter a valid email address.';
-    const d = value('preferredDate');
-    if (!isIsoDate(d)) errors.preferredDate = 'Choose a preferred date.';
-    else if (d < today || d > max) errors.preferredDate = `Choose a date between today and ${MAX_DAYS_AHEAD} days from now.`;
-    if (!value('preferredTime')) errors.preferredTime = 'Choose a preferred time.';
-    const ad = value('alternateDate');
-    const at = value('alternateTime');
-    if (ad && !isIsoDate(ad)) errors.alternateDate = 'Choose a valid alternative date.';
-    else if (ad && (ad < today || ad > max)) errors.alternateDate = `Choose a date between today and ${MAX_DAYS_AHEAD} days from now.`;
-    if (ad && !at) errors.alternateTime = 'Choose a time for your alternative date.';
-    if (at && !ad) errors.alternateDate = 'Choose a date for your alternative time.';
+    const phone = value('phone');
+    const digits = phoneDigits(phone);
+    if (phone && (digits.length < 10 || digits.length > 15)) errors.phone = 'Enter a full phone number with area code, or leave it blank.';
     if (value('message').length > 1000) errors.message = 'Please keep the message under 1,000 characters.';
     return errors;
   }
@@ -248,7 +230,6 @@ export function initShowingForm(): void {
   function showErrors(errors: FieldErrors): void {
     const entries = Object.entries(errors);
     if (!entries.length) return;
-    if (errors.alternateDate || errors.alternateTime) form.querySelector<HTMLDetailsElement>('[data-alt]')!.open = true;
     for (const [name, msg] of entries) {
       const el = field(name);
       el?.setAttribute('aria-invalid', 'true');
@@ -308,13 +289,8 @@ export function initShowingForm(): void {
     const fd = new FormData(form);
     const payload = {
       name: value('name'),
-      phone: value('phone'),
+      phone: value('phone') || undefined,
       email: value('email'),
-      preferredDate: value('preferredDate'),
-      preferredTime: value('preferredTime'),
-      alternateDate: value('alternateDate') || undefined,
-      alternateTime: value('alternateTime') || undefined,
-      flexible: fd.get('flexible') === '1',
       tourType: fd.get('tourType') === 'video' ? 'video' : 'in_person',
       message: value('message') || undefined,
       company: value('kp_check'),
@@ -343,7 +319,7 @@ export function initShowingForm(): void {
       // The conversion means "accepted and persisted": decoy successes for bot-like submissions are never counted.
       if (data.leadId && !counted.has(data.leadId) && !isLikelyBot(payload.elapsedMs)) {
         counted.add(data.leadId);
-        track('showing_request_submitted', { cta_location: payload.ctaOrigin, tour_type: data.tourType });
+        track('showing_request_submitted', { cta_location: payload.ctaOrigin, tour_type: data.tourType }, data.eventId);
       }
       form.reset();
       if (sheetActive) {
@@ -372,7 +348,7 @@ export function initShowingForm(): void {
     const paras = data.notified
       ? [
           'Your showing request has been sent to the listing agent.',
-          `${agentName} will contact you directly by phone to confirm the date and time based on availability.`,
+          `${agentName} will contact you directly to arrange a time, based on availability.`,
         ]
       : [
           'Your request has been received and saved.',
@@ -380,7 +356,8 @@ export function initShowingForm(): void {
         ];
     body.replaceChildren(...paras.map((t) => Object.assign(document.createElement('p'), { textContent: t })));
 
-    const rows: [string, string][] = [['Requested', data.preferred]];
+    const rows: [string, string][] = [];
+    if (data.preferred) rows.push(['Requested', data.preferred]);
     if (data.alternate) rows.push(['Alternative', data.alternate]);
     rows.push(['Showing type', TOUR_LABEL[data.tourType]]);
     if (data.flexible) rows.push(['Flexible', 'Yes']);

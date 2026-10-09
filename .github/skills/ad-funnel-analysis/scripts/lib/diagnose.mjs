@@ -330,8 +330,8 @@ export function diagnose(model, funnelCfg, campaignsCfg) {
         `form starts (GA4): ${camps.map((c) => `${c.label} ${int(c.funnel.formStarts)}`).join(', ')}` +
         `${s ? `; ${int(s.formOpened)} in-app visitors reached or opened the form and ${int(s.requestSent)} sent it${s.requestSent > sent ? ' (without ad tags)' : ''} (website)` : ''}` +
         `; if 30% of starters normally finish, ${int(sent)} of ${int(starts)} has a ${pct(chance, 0)} chance`,
-      why: 'Starting but not sending points at the form itself: five required fields (name, phone, email, date, time) and date pickers are a lot on a phone.',
-      action: 'Require only a name and one contact method; make date and time optional with "flexible" pre-selected (form and API validation).',
+      why: 'Starting but not sending points at the form itself. Since 9 Oct 2026 it asks only for a name and an email (phone and message optional), so look at what still stops people: the verification step, error messages, or the button scrolled out of view on a phone.',
+      action: 'Watch a phone session from the ad (in-app browser) to the success dialog; check Turnstile failures and 4xx answers from /api/showing-request in the Worker logs; compare with the Meta lead-form campaign, which needs no website form at all.',
     });
   }
   const staticTags = camps.flatMap((c) => c.settings.ads.filter((a) => a.utm?.utm_campaign && !a.utm.utm_campaign.includes('{{')));

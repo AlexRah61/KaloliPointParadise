@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { property } from '../data/property';
 const a = property.agent;
-const updated = 'October 7, 2026';
+const updated = 'October 9, 2026';
 ---
 
 <Base title={`Privacy notice | ${property.name}`} description="How this property website handles showing requests and visitor data." path="/privacy/" minimalChrome>
@@ -22,10 +22,19 @@ const updated = 'October 7, 2026';
 
         <h2>What we collect when you request a showing</h2>
         <p>
-          Your name, phone number, email address, preferred and alternative dates and times, showing type, whether you are
-          flexible, and any message you write. We also record how you found the site (campaign tags such as utm_source,
-          ad click identifiers such as gclid or fbclid, the referring website and the landing page), the time of the
-          request, and a one-way hash of your IP address used only to stop spam.
+          Your name and email address, your phone number if you choose to give it, the showing type (in person or live
+          video) and any message you write, such as days or times that suit you. We also record how you found the site
+          (campaign tags such as utm_source, ad click identifiers such as gclid or fbclid, the referring website and the
+          landing page), the time of the request, and a one-way hash of your IP address used only to stop spam.
+        </p>
+
+        <h2>Lead forms on Facebook and Instagram</h2>
+        <p>
+          Some of our ads let you send your details without leaving Facebook or Instagram. When you submit such a form, Meta
+          passes us what you entered (typically your name, email address and phone number, plus any answers to the form's
+          questions) and which ad you saw. We handle it like a showing request from this website: it is stored with the other
+          requests and sent to the listing agent, with a copy to the website's administrator. On its way to us it passes
+          through a private Google Sheet in the website owner's Google account.
         </p>
 
         <h2>How it is used</h2>
@@ -49,7 +58,7 @@ const updated = 'October 7, 2026';
           film, clicks on showing or contact buttons, and whether a showing request was submitted. Google Analytics sets its
           own cookies and is governed by Google's privacy policy; you can opt out with Google's
           <a href="https://tools.google.com/dlpage/gaoptout" rel="noopener">browser add-on</a>. Your name, phone number,
-          email, message and requested showing times are never sent to Google. Cloudflare Web Analytics, part of the
+          email, message and requested showing details are never sent to Google. Cloudflare Web Analytics, part of the
           hosting service, also measures page speed and aggregate visits without cookies.
         </p>
 
@@ -59,8 +68,10 @@ const updated = 'October 7, 2026';
           to call the listing agent, and whether a showing request was submitted. Meta receives your IP address, browser
           and device details and the address of the page, and sets its own cookies (such as _fbp). When you fill in and
           send the showing request form, the pixel may also send your name, email address and phone number to Meta in
-          hashed (scrambled) form, so Meta can match the visit to its accounts; your message and requested showing times
-          are not sent. Meta handles this information under
+          hashed (scrambled) form, so Meta can match the visit to its accounts. Our server also tells Meta directly that a
+          showing request was sent (Meta's Conversions API), with the same hashed name, email address and phone number,
+          your IP address and browser details, and Meta's own cookie identifiers, so the result is measured even when the
+          pixel is blocked. Your message is never sent to Meta. Meta handles this information under
           <a href="https://www.facebook.com/privacy/policy" rel="noopener">Meta's Privacy Policy</a>, and you can manage how
           it is used for ads in your <a href="https://www.facebook.com/adpreferences" rel="noopener">ad preferences</a>.
         </p>

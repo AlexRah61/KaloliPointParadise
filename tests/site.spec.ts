@@ -194,7 +194,7 @@ test.describe('page', () => {
     await page.locator('[data-hero]').getByRole('link', { name: /request a private or virtual tour/i }).click();
     const sheet = page.locator('#showing-sheet');
     await sheet.getByLabel('Full name').fill('Continuity Check');
-    await sheet.getByLabel('Preferred time').selectOption('10:00');
+    await sheet.getByLabel('Email').fill('continuity@example.com');
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
     await page.evaluate(() => window.scrollTo(0, document.getElementById('gallery')!.offsetTop));
@@ -202,7 +202,7 @@ test.describe('page', () => {
     await page.locator('[data-showing-cta="mobile_sticky"]:visible, [data-showing-cta="desktop_header"]:visible').first().click();
     await expect(sheet).toBeVisible();
     await expect(sheet.getByLabel('Full name')).toHaveValue('Continuity Check');
-    await expect(sheet.getByLabel('Preferred time')).toHaveValue('10:00');
+    await expect(sheet.getByLabel('Email')).toHaveValue('continuity@example.com');
   });
 
   test('the tour request CTA stays reachable from top to footer and back', { tag: '@phone' }, async ({ page }) => {

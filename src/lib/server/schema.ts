@@ -45,17 +45,21 @@ export const CTA_ORIGINS = [
 export const ShowingRequestSchema = z
   .object({
     name: z.string().trim().min(2, 'Enter your full name.').max(100, 'Please shorten your name.'),
+    // Optional, but a number that is given must be callable.
     phone: z
       .string()
       .trim()
       .max(30)
       .refine((v) => {
+        if (!v) return true;
         const n = phoneDigits(v).length;
         return n >= 10 && n <= 15;
-      }, 'Enter a phone number the agent can call, including area code.'),
+      }, 'Enter a full phone number with area code, or leave it blank.')
+      .optional(),
     email: z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email address.')),
-    preferredDate: isoDate,
-    preferredTime: z.enum(SLOTS, 'Choose a preferred time.'),
+    // The form stopped asking for dates and times on 2026-10-09; pages loaded before then still send them.
+    preferredDate: isoDate.optional(),
+    preferredTime: z.enum(SLOTS, 'Choose a preferred time.').optional(),
     alternateDate: isoDate.optional(),
     alternateTime: z.enum(SLOTS, 'Choose a valid alternative time.').optional(),
     flexible: z.boolean().default(false),
