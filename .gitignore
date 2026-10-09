@@ -27,6 +27,7 @@ test-results/
 playwright-report/
 qa/
 
-# Agent skills: account IDs stay local, and run outputs (marketing data) are never committed
+# Agent skills: account IDs stay local, and raw run outputs (marketing data) are never committed.
+# The curated PDF reports in "daily ad report/" are committed on purpose.
 .github/skills/**/*.local.json
 reports/

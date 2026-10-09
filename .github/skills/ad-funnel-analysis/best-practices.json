@@ -1,0 +1,243 @@
+{
+  "consulted": "2026-10-08",
+  "note": "Best-practice basis for each recommendation. Every statement is paraphrased from the linked source (re-check the links when Meta or Google change their guidance). 'practice' = what the guidance says, 'expect' = what should change if the advice is followed, 'check' = what the next report should show.",
+  "sources": {
+    "meta-learning": { "title": "Meta: About the learning phase", "url": "https://www.facebook.com/business/help/112167992830700" },
+    "meta-significant-edits": { "title": "Meta: Significant edits and the learning phase", "url": "https://www.facebook.com/business/help/316478108955072" },
+    "meta-ab-about": { "title": "Meta: About A/B testing", "url": "https://www.facebook.com/business/help/1738164643098669" },
+    "meta-ab-best": { "title": "Meta: Best practices for A/B testing", "url": "https://www.facebook.com/business/help/290009911394576" },
+    "meta-ab-winner": { "title": "Meta: How winning campaigns are determined in A/B tests", "url": "https://www.facebook.com/business/help/166313650471318" },
+    "meta-ab-edit": { "title": "Meta: Edit or cancel your A/B test", "url": "https://www.facebook.com/business/help/286876155019610" },
+    "meta-lpv": { "title": "Meta: Best practices for landing page view performance goals", "url": "https://www.facebook.com/business/help/203012060587398" },
+    "meta-fluctuations": { "title": "Meta: Understand fluctuations in ad performance", "url": "https://www.facebook.com/business/help/1364841787225722" },
+    "meta-fatigue": { "title": "Meta: About creative fatigue recommendations", "url": "https://www.facebook.com/business/help/1346816142327858" },
+    "meta-placements": { "title": "Meta: How the delivery system works with Advantage+ placements", "url": "https://www.facebook.com/business/help/965529646866485" },
+    "meta-sac": { "title": "Meta: How to choose a Special Ad Category", "url": "https://www.facebook.com/business/help/298000447747885" },
+    "meta-location": { "title": "Meta: Use location targeting", "url": "https://www.facebook.com/business/help/365561350785642" },
+    "meta-capi": { "title": "Meta: About the Conversions API", "url": "https://www.facebook.com/business/help/2041148702652965" },
+    "ga4-utm": { "title": "Google Analytics: Collect campaign data with custom URLs (UTM best practices)", "url": "https://support.google.com/analytics/answer/10917952" },
+    "ga4-freshness": { "title": "Google Analytics: Data freshness", "url": "https://support.google.com/analytics/answer/11198161" },
+    "ga4-bots": { "title": "Google Analytics: Known bot-traffic exclusion", "url": "https://support.google.com/analytics/answer/9888366" },
+    "google-lpe": { "title": "Google Ads: Quality Score and landing page experience", "url": "https://support.google.com/google-ads/answer/6167118" },
+    "webdev-vitals": { "title": "web.dev: Web Vitals (LCP, INP, CLS thresholds)", "url": "https://web.dev/articles/vitals" },
+    "nng-forms": { "title": "Nielsen Norman Group: Website forms usability, top 10 recommendations", "url": "https://www.nngroup.com/articles/web-form-design/" }
+  },
+  "practices": {
+    "geo-outside-target": {
+      "practice": "Meta delivers inside the locations you choose and buys the cheapest results there, so every extra country takes budget; keep only the markets where buyers live.",
+      "sources": ["meta-location"],
+      "expect": "All spend lands in targeted markets from the first full day after the edit.",
+      "check": "Tomorrow's country table shows $0 outside the targeted countries."
+    },
+    "geo-removed-today": {
+      "practice": "Judge a targeting change on the first full day after it; same-day numbers still include the hours before the edit.",
+      "sources": ["meta-fluctuations"],
+      "expect": "No spend in the removed countries tomorrow.",
+      "check": "Spend in the removed countries is $0 on the next full day."
+    },
+    "geo-priority-share": {
+      "practice": "Within its locations Meta chases the cheapest results, so a cheaper market crowds out the one you care about; a separate ad set and budget per market is the lever that guarantees a share. With the Housing category, narrowing tools (age, gender, ZIP) are unavailable, so location and budget are the main controls. Keep it to few ad sets so each still gets enough results to learn.",
+      "sources": ["meta-location", "meta-sac", "meta-learning"],
+      "expect": "The priority market gets the budget you assign to it, at a higher but more relevant cost per page view.",
+      "check": "Priority-market share of spend reaches the target on the next full day."
+    },
+    "geo-regions": {
+      "practice": "Location targeting reaches people who live in a place, were there recently or travel there; for home buyers choose 'People living in this location'.",
+      "sources": ["meta-location"],
+      "expect": "Less spend on travellers passing through the targeted states.",
+      "check": "US spend outside the targeted states falls below 10%."
+    },
+    "placements": {
+      "practice": "Meta recommends Advantage+ placements and warns that a higher average cost in one placement does not make it inefficient; exclude a placement only when its traffic quality (page loads per click, engagement) is clearly worse.",
+      "sources": ["meta-placements"],
+      "expect": "Fewer accidental taps; a higher share of clicks that load the page.",
+      "check": "At least 85% of clicks load the page and cost per landing page view does not rise."
+    },
+    "ctr-low": {
+      "practice": "When people stop tapping, introduce a materially different creative (new opening shot and on-screen text) and keep the original running; test one change at a time.",
+      "sources": ["meta-fatigue", "meta-ab-best"],
+      "expect": "Link CTR back above the poor benchmark on the new cut.",
+      "check": "Link CTR of the new creative after 1,000+ impressions."
+    },
+    "lpv-low": {
+      "practice": "Landing page view optimisation already favours people who wait for the page; if page loads per click stay low, check accidental-tap placements and loading speed (LCP within 2.5 s on mobile).",
+      "sources": ["meta-lpv", "webdev-vitals"],
+      "expect": "More of the paid clicks become real page views.",
+      "check": "Clicks that load the page reach 85% or more."
+    },
+    "ga4-capture": {
+      "practice": "GA4 processing takes 24-48 hours and ad blockers hide some sessions; use Meta landing page views for ad-to-site rates until GA4 settles.",
+      "sources": ["ga4-freshness"],
+      "expect": "The gap narrows once the data is two days old.",
+      "check": "GA4 sessions vs landing page views on days that are 2+ days old."
+    },
+    "engagement-low": {
+      "practice": "Landing page experience - how relevant and useful the page is to people who clicked the ad - drives results; continue the ad's message on the first screen and load fast (LCP within 2.5 s).",
+      "sources": ["google-lpe", "webdev-vitals"],
+      "expect": "More ad visitors engage (10 s+, 2 pages or a key event).",
+      "check": "GA4 engagement rate on day-old data reaches the benchmark."
+    },
+    "zero-leads-signal": {
+      "practice": "Once enough visitors have arrived, zero requests is a page problem, not bad luck: shorten the ask (fewer fields, a lower-commitment option) before buying more traffic.",
+      "sources": ["nng-forms", "google-lpe"],
+      "expect": "First tour requests from ad visitors.",
+      "check": "Requests per landing page view in the next report."
+    },
+    "zero-leads-normal": {
+      "practice": "Judge overall results over a full week rather than single days; at this volume zero requests is statistically expected (binomial test in this report), so track leading indicators: engaged visits and tour-button clicks.",
+      "sources": ["meta-fluctuations"],
+      "expect": "Requests appear as page views accumulate toward the threshold.",
+      "check": "Page views vs the 'needed before zero is meaningful' figure."
+    },
+    "frequency": {
+      "practice": "When the same people see an ad too often, cost per result rises (creative fatigue); add a materially different creative and keep the original running, or widen the audience.",
+      "sources": ["meta-fatigue"],
+      "expect": "Frequency back under 2 and a stable CTR.",
+      "check": "Frequency and CTR by day."
+    },
+    "pacing": {
+      "practice": "Daily budgets average out over a week (some days spend up to 75% more, others less); persistent under-spend points at a narrow audience, a bid cap or ads in review.",
+      "sources": ["meta-fluctuations"],
+      "expect": "Spend tracks the budget across the week.",
+      "check": "Budget used over the next 2 full days."
+    },
+    "learning": {
+      "practice": "Avoid edits while an ad set is learning: ad sets usually exit after about 50 optimisation events in a week, and significant edits (targeting, creative, optimisation event, large budget changes) restart learning.",
+      "sources": ["meta-learning", "meta-significant-edits"],
+      "expect": "Cost per result stabilises once learning ends.",
+      "check": "Delivery shows Active (not Learning) and cost per page view settles."
+    },
+    "utm-missing": {
+      "practice": "Always set utm_source, utm_medium and utm_campaign; use dynamic values ({{campaign.name}}, {{ad.name}}, {{site_source_name}}) and lowercase so GA4 rows do not fragment.",
+      "sources": ["ga4-utm"],
+      "expect": "GA4 attributes every ad visit and request to its campaign.",
+      "check": "The new campaign value appears in GA4 within 48 hours."
+    },
+    "utm-dynamic": {
+      "practice": "Google recommends one utm_campaign per campaign that matches the campaign name ({{campaign.name}}), one utm_source per platform ({{site_source_name}}) and lowercase values, filled in by dynamic parameters to avoid typing errors.",
+      "sources": ["ga4-utm"],
+      "expect": "New ads are tracked without editing the report configuration.",
+      "check": "No 'unmapped' or 'shared' GA4 rows in the next report."
+    },
+    "utm-shared": {
+      "practice": "Give each campaign its own utm_campaign value so one effort does not split into several rows or two ads merge into one.",
+      "sources": ["ga4-utm"],
+      "expect": "GA4 numbers per campaign without estimates.",
+      "check": "The shared-value estimate disappears once the window starts after the retag."
+    },
+    "utm-unmapped": {
+      "practice": "Keep utm values consistent and case-sensitive; a stray value becomes its own row.",
+      "sources": ["ga4-utm"],
+      "expect": "Every GA4 ad session counted under a campaign.",
+      "check": "No unmapped values."
+    },
+    "campaign-unconfigured": {
+      "practice": "Give each campaign one utm_campaign value that matches its name, so every report can attribute it.",
+      "sources": ["ga4-utm"],
+      "expect": "The campaign gets a label, budget and GA4 rows in the report.",
+      "check": "The campaign no longer shows as unconfigured."
+    },
+    "bots": {
+      "practice": "GA4 removes only known bots (the IAB list); other automated visits, such as ad-review crawlers from data centres, stay in the data, so read engagement from human in-app visits when the two disagree.",
+      "sources": ["ga4-bots"],
+      "expect": "Engagement judged on people, not crawlers.",
+      "check": "Data-centre share of GA4 users."
+    },
+    "ga4-pending": {
+      "practice": "GA4 data processing can take 24-48 hours, and campaign attribution changes until the daily data is ready; judge per-campaign GA4 rates on days that are at least a day old.",
+      "sources": ["ga4-freshness"],
+      "expect": "Pending sessions move to their campaigns.",
+      "check": "Pending share on day-old data."
+    },
+    "pixel-vs-db": {
+      "practice": "Send the Lead event server-side with the Conversions API (deduplicated with the pixel) so Meta sees requests that browsers block; the website database stays the source of truth.",
+      "sources": ["meta-capi"],
+      "expect": "Meta's lead count matches stored requests and optimisation has more signal.",
+      "check": "Pixel leads vs stored requests."
+    },
+    "ab-key-metric": {
+      "practice": "Meta picks the A/B winner on the cost per result of the key metric chosen at setup; choose the metric that matches the business goal (cost per landing page view now, cost per lead later).",
+      "sources": ["meta-ab-winner", "meta-ab-best"],
+      "expect": "A winner that predicts website visits and tour requests, not likes.",
+      "check": "The next test's key metric."
+    },
+    "ab-duration": {
+      "practice": "Meta recommends A/B tests of at least 7 days (30 at most); shorter tests may be inconclusive. Schedule changes are possible but affect the reliability of results collected so far.",
+      "sources": ["meta-ab-best", "meta-ab-edit"],
+      "expect": "A full week of data, including a weekend, behind the decision.",
+      "check": "Test schedule of 7+ days."
+    },
+    "ab-budget": {
+      "practice": "Meta recommends the same budget for both versions of a test for a fair comparison; a large budget change can also send ad sets back into learning.",
+      "sources": ["meta-ab-about", "meta-significant-edits"],
+      "expect": "Like-for-like arms, so the cheaper cost per result reflects the creative.",
+      "check": "Equal daily budgets on every remaining test day."
+    },
+    "objective-traffic": {
+      "practice": "Conversion-optimised ad sets need about 50 conversions a week to work; below that, landing page view optimisation is the recommended alternative.",
+      "sources": ["meta-lpv", "meta-learning"],
+      "expect": "Cheap, real visits now; switch to lead optimisation once requests approach 50 a week.",
+      "check": "Weekly tour requests."
+    },
+    "first-screen-exit": {
+      "practice": "Landing page experience - relevance to the ad and ease of use on mobile - decides whether visitors stay; continue the ad's story on the first screen and keep it fast (LCP within 2.5 s).",
+      "sources": ["google-lpe", "webdev-vitals"],
+      "expect": "More in-app visitors scroll past the first screen.",
+      "check": "Share of in-app visits that scroll past the first screen, day over day."
+    },
+    "form-friction": {
+      "practice": "Keep forms short: every field removed raises completion; make the rest optional and label it, with at most one or two optional fields.",
+      "sources": ["nng-forms"],
+      "expect": "More form starters send the request.",
+      "check": "Form starts vs requests sent."
+    },
+    "costlier": {
+      "practice": "Read performance over full days and weeks, not hours; act only when a change is beyond noise, and then on its driver: CTR (creative fatigue), CPM (auction or audience) or page loads (placements or site).",
+      "sources": ["meta-fluctuations", "meta-fatigue"],
+      "expect": "Cost per page view back to its earlier level.",
+      "check": "The next day-over-day comparison."
+    },
+    "cheaper": {
+      "practice": "Keep a setup that is improving unchanged; edits restart learning.",
+      "sources": ["meta-learning"],
+      "expect": "The lower cost holds.",
+      "check": "The next day-over-day comparison."
+    },
+    "site-day-better": {
+      "practice": "Keep site changes that hold more visitors past the first screen.",
+      "sources": ["google-lpe"],
+      "expect": "The higher scroll share holds.",
+      "check": "Website by day."
+    },
+    "site-day-worse": {
+      "practice": "When fewer visitors scroll after a change, compare with the change log and revert or adjust the latest site or creative change.",
+      "sources": ["google-lpe"],
+      "expect": "Scroll share back to its earlier level.",
+      "check": "Website by day."
+    },
+    "ab-winner": {
+      "practice": "Act on a difference only when it is beyond chance and backed by enough results; carry the winning element into the next test and test one variable at a time.",
+      "sources": ["meta-ab-best"],
+      "expect": "Better results from the winning element.",
+      "check": "The difference stays significant as volume grows."
+    },
+    "special-ad-category": {
+      "practice": "Ads about housing must use the Housing special ad category (US, Canada and some European countries); undeclared campaigns can be rejected. Age, gender, ZIP code and some other audience options are limited.",
+      "sources": ["meta-sac"],
+      "expect": "No rejected ads or account restrictions.",
+      "check": "Special ad categories = Housing on every campaign."
+    },
+    "special-ad-category-ok": {
+      "practice": "Housing ads must use the Housing special ad category.",
+      "sources": ["meta-sac"],
+      "expect": "Compliant delivery.",
+      "check": "Keep it on new campaigns."
+    },
+    "default": {
+      "practice": "Change one thing at a time and judge it on full days, beyond daily noise.",
+      "sources": ["meta-fluctuations"],
+      "expect": "A clear read on the change.",
+      "check": "The next report."
+    }
+  }
+}

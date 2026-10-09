@@ -1,15 +1,19 @@
-# ad-funnel-analysis: collect (stored leads, website visits, Meta Ads, GA4) -> analyze -> report, in one command.
-#   pwsh -File .github/skills/ad-funnel-analysis/scripts/run.ps1 [-Since yyyy-MM-dd] [-Until yyyy-MM-dd] [-Quick]
+# ad-funnel-analysis: collect (stored leads, website visits, Meta Ads, GA4) -> analyze -> report -> PDF, in one command.
+#   pwsh -File .github/skills/ad-funnel-analysis/scripts/run.ps1 [-Since yyyy-MM-dd] [-Until yyyy-MM-dd] [-Quick] [-Publish]
 #   pwsh -File .github/skills/ad-funnel-analysis/scripts/run.ps1 -RunDir reports/ad-funnel-analysis/<run-id>   # re-analyze only
 # Meta and GA4 are read in temporary windows of the owner's signed-in Edge profile (read-only; nothing is edited).
+# The PDF goes to "daily ad report/" in the repository; -Publish commits only that file and pushes it.
 param(
   [string]$Since,
   [string]$Until,
   [switch]$Quick,
   [switch]$SkipMeta,
+  [switch]$SkipMetaCharts,
   [switch]$SkipGa4,
   [switch]$SkipSite,
   [switch]$SkipLeads,
+  [switch]$NoPdf,
+  [switch]$Publish,
   [string]$RunDir
 )
 $ErrorActionPreference = 'Stop'
@@ -43,6 +47,10 @@ function Invoke-Step([string]$Name, [scriptblock]$Body) {
 if ($RunDir) {
   $dir = (Resolve-Path $RunDir).Path
 } else {
+  if (-not ($SkipMeta -and $SkipGa4)) {
+    Import-Module (Join-Path $shared 'EdgeSession.psm1') -Force -DisableNameChecking
+    if (Test-EdgeDesktopLocked) { throw 'The Windows session is locked: Edge cannot show or read Meta and GA4 pages. Unlock the PC (keep it awake during the run) and rerun, or use -SkipMeta -SkipGa4.' }
+  }
   $dir = Join-Path $repo "reports\ad-funnel-analysis\$($now.ToString('yyyy-MM-ddTHHmm'))"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
   $skipped = @()
@@ -67,6 +75,7 @@ if ($RunDir) {
     if (-not $SkipLeads) { Invoke-Step 'Stored tour requests (D1)' { & $node (Join-Path $PSScriptRoot 'collect-leads.mjs') --since $Since --until $Until --out (Join-Path $dir 'leads.json') } }
     if (-not $SkipMeta -or -not $SkipGa4) { Write-Host 'Edge windows will open and close by themselves for Meta and GA4; please do not type in them.' }
     if (-not $SkipMeta) { Invoke-Step 'Meta Ads (Edge)' { & (Join-Path $PSScriptRoot 'collect-meta.ps1') -Since $Since -Until $Until -OutDir $dir -Quick:$Quick } }
+    if (-not $SkipMeta -and -not $SkipMetaCharts) { Invoke-Step 'Meta insight charts and campaign settings (Edge)' { & (Join-Path $PSScriptRoot 'collect-meta-insights.ps1') -Since $Since -Until $Until -OutDir $dir -Settings } }
     if (-not $SkipGa4) { Invoke-Step 'GA4 (Edge)' { & (Join-Path $PSScriptRoot 'collect-ga4.ps1') -Since $Since -Until $Until -OutDir $dir -Quick:$Quick } }
     # Cloudflare last: its query budget recovers while the browser steps run, which matters for back-to-back runs.
     if (-not $SkipSite) { Invoke-Step 'Website visits (Cloudflare)' { & $node (Join-Path $PSScriptRoot 'collect-site.mjs') --since $Since --until $Until --out (Join-Path $dir 'site.json') --leads (Join-Path $dir 'leads.json') } }
@@ -79,3 +88,22 @@ if ($LASTEXITCODE) { throw 'analyze failed' }
 if ($LASTEXITCODE) { throw 'report failed' }
 Write-Host "Report: $(Join-Path $dir 'report.md')"
 Write-Host "        $(Join-Path $dir 'report.html')"
+if ($NoPdf) { return }
+
+& $node (Join-Path $PSScriptRoot 'export-pdf.mjs') --run $dir
+if ($LASTEXITCODE) { Write-Warning "The PDF was not filed in the repository (export-pdf exit code $LASTEXITCODE)."; return }
+$pdf = Get-Content (Join-Path $dir 'pdf.json') -Raw | ConvertFrom-Json
+Write-Host "PDF:    $($pdf.repoPath)"
+if (-not $Publish) { return }
+
+# Commit only the new PDF (other staged work stays staged) and push it when it is the only unpushed commit.
+Push-Location $repo
+try {
+  git add -- $pdf.repoPath
+  git commit --quiet -m "Daily ad report: $([IO.Path]::GetFileNameWithoutExtension($pdf.name))" -- $pdf.repoPath
+  if ($LASTEXITCODE) { Write-Warning 'git commit failed; the PDF is saved but not committed.'; return }
+  $ahead = git rev-list --count '@{u}..HEAD' 2>$null
+  if ($ahead -ne '1') { Write-Warning "Committed locally but not pushed: $(if ($ahead) { "$ahead commits" } else { 'no upstream branch' }) ahead of the remote. Push them yourself."; return }
+  git push --quiet
+  if ($LASTEXITCODE) { Write-Warning 'git push failed; the report is committed locally.' } else { Write-Host 'Published: committed and pushed.' }
+} finally { Pop-Location }

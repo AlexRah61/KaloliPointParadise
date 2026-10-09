@@ -7,8 +7,9 @@ import { parseArgs, readJson, readJsonIfExists } from '../../_shared/config.mjs'
 import { parseCsv } from '../../_shared/csv.mjs';
 import { offsetMs, zonedMidnightUtc } from '../../_shared/time.mjs';
 import { deltas, diagnose, validate } from './lib/diagnose.mjs';
+import { money } from './lib/format.mjs';
 import { parseGa4Table } from './lib/ga4.mjs';
-import { normalizeMetaRows, parseExperiment, parseManageTable } from './lib/meta.mjs';
+import { normalizeMetaRows, parseCampaignSettings, parseExperiment, parseManageTable } from './lib/meta.mjs';
 import { buildModel } from './lib/model.mjs';
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -92,6 +93,26 @@ const sources = {
 };
 
 const model = buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, site });
+
+// Charts and settings from each campaign's Ads Manager insights page (collect-meta-insights.ps1).
+const insightsDir = join(dir, 'meta', 'insights');
+const insights = readJsonIfExists(join(insightsDir, 'insights.json'));
+model.metaInsights = null;
+if (insights) {
+  model.metaInsights = { range: insights.range, collectedAt: insights.collectedAt, abTest: insights.abTest ?? null, campaigns: [] };
+  for (const x of insights.campaigns ?? []) {
+    const settings = x.settings ? parseCampaignSettings(lines(join(insightsDir, x.settings.edit)), lines(join(insightsDir, x.settings.review)), Number(run.until.slice(0, 4))) : null;
+    model.metaInsights.campaigns.push({ name: x.name, charts: x.charts ?? [], settings, errors: x.errors ?? [] });
+    const c = model.campaigns.find((y) => y.metaCampaign === x.name);
+    if (c) c.campaignSettings = settings;
+    for (const s of settings?.scheduledBudgets ?? []) {
+      const what = `${c?.label ?? x.name}: scheduled daily budget ${money(s.dailyBudget)} for ${s.period} (Ads Manager budget scheduling)`;
+      if (s.from && !model.changes.some((y) => y.what === what)) model.changes.push({ at: zonedMidnightUtc(s.from, tz).toISOString(), what, source: 'Ads Manager', campaigns: c ? [c.key] : [] });
+    }
+  }
+  model.changes.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
+
 model.findings = diagnose(model, funnelCfg, campaignsCfg);
 model.validation = validate(model, { sources, metaExports: (metaCollect?.items ?? []).filter((i) => i.requested) });
 model.sources = sources;

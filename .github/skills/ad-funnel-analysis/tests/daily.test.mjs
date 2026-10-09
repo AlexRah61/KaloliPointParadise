@@ -129,7 +129,7 @@ test('the report shows the day-over-day section, the trend chart and today vs ye
   for (const s of ['analyze.mjs', 'report.mjs']) execFileSync(process.execPath, [join(scripts, s), '--run', dir, '--campaigns', cfg], { encoding: 'utf8' });
   const md = readFileSync(join(dir, 'report.md'), 'utf8');
   assert.ok(md.includes('## Day over day'));
-  assert.match(md, /Day over day \(Jan 1 vs Dec 31\): Video A cheaper, \u221272% cost per page view; Video B costlier, \+200% cost per page view/);
+  assert.match(md, /Day over day \(Jan 1 vs Dec 31\):\*\* Video A cheaper, \u221272% cost per page view; Video B costlier, \+200% cost per page view/);
   assert.ok(md.includes('### Today until 12 PM vs yesterday until 12 PM'));
   assert.match(md, /\| Video B \| Jan 2 \(today, so far\) \|/);
   assert.ok(!/NaN|undefined/.test(md));

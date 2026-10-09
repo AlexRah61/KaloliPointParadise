@@ -3,6 +3,7 @@
 import { addDays, zonedDate, zonedLabel } from '../../../_shared/time.mjs';
 import { sumPeriod } from './daily.mjs';
 import { int, money, pct } from './format.mjs';
+import { parseDateSpan } from './meta.mjs';
 import { binomialCdf } from './stats.mjs';
 
 const IMPACT = { high: 3, medium: 2, low: 1 };
@@ -76,7 +77,11 @@ export function diagnose(model, funnelCfg, campaignsCfg) {
   const label = (key) => camps.find((c) => c.key === key)?.label ?? key;
   const priorityMarkets = campaignsCfg.priorityMarkets ?? [];
   const allowed = campaignsCfg.targeting?.countries ?? [];
-  const recentChange = (hours) => (model.changes ?? []).filter((c) => Date.parse(model.run.generatedAt) - Date.parse(c.at) < hours * 3600e3);
+  const recentChange = (hours) =>
+    (model.changes ?? []).filter((c) => {
+      const age = Date.parse(model.run.generatedAt) - Date.parse(c.at);
+      return age >= 0 && age < hours * 3600e3;
+    });
   // Meta's country data is per day, so a targeting change made today cannot be checked until tomorrow's report.
   const changesToday = (model.changes ?? []).filter((c) => zonedDate(Date.parse(c.at), model.run.metaTimezone) === model.run.metaToday);
   const lastChange = changesToday.map((c) => Date.parse(c.at)).sort((x, y) => y - x)[0];
@@ -408,6 +413,65 @@ export function diagnose(model, funnelCfg, campaignsCfg) {
         action: 'Judge the ads in this report (cost per engaged visit, tour-button clicks). For the next test choose "Cost per landing page view" or "Cost per lead" as key metric.',
       });
     }
+  }
+  // A/B test length and budget parity (Meta: at least 7 days, the same budget for both versions).
+  const year = Number(model.run.until.slice(0, 4));
+  const dayList = (from, to) => {
+    const out = [];
+    for (let d = from; d <= to; d = addDays(d, 1)) out.push(d);
+    return out;
+  };
+  for (const x of model.experiments) {
+    const running = /progress|scheduled|running/i.test(x.status ?? '');
+    const span = x.duration ? parseDateSpan(x.duration, year) : null;
+    if (!running || !span) continue;
+    // "Oct 8, 12:00 AM - Oct 14, 12:00 AM" ends at the start of Oct 14; an 11:59 PM end includes that day.
+    const lastDay = /11:59\s*PM\s*$/i.test(x.duration) ? span.to : addDays(span.to, -1);
+    const days = dayList(span.from, lastDay).length;
+    if (days < 7) {
+      add({
+        id: 'ab-duration', area: 'Ads', severity: 'medium', impact: 'medium', effort: 'easy',
+        title: `The A/B test runs ${days} day${days === 1 ? '' : 's'}, under Meta's 7-day minimum`,
+        evidence: `Test schedule ${x.duration}; ${x.status}`,
+        why: 'Tests shorter than 7 days miss weekday/weekend differences and often end without a confident winner.',
+        action: `Treat this test's result as directional and schedule the next test for 7+ days. To extend this one, Experiments > the test > Edit schedule, ending ${dayLabel(addDays(span.from, 7))} or later (Meta notes schedule changes affect the reliability of results so far).`,
+      });
+    }
+    const arms = x.arms.map((a) => camps.find((c) => c.metaCampaign === a.name)).filter(Boolean);
+    if (arms.length < 2 || arms.some((c) => !c.campaignSettings)) continue;
+    const budgetOn = (c, day) => c.campaignSettings.scheduledBudgets.find((s) => s.from && s.from <= day && day <= s.to)?.dailyBudget ?? c.campaignSettings.dailyBudget;
+    const remaining = dayList(model.run.metaToday > span.from ? model.run.metaToday : span.from, lastDay);
+    const uneven = remaining.filter((day) => new Set(arms.map((c) => budgetOn(c, day))).size > 1);
+    if (uneven.length) {
+      const scheduled = arms.flatMap((c) => c.campaignSettings.scheduledBudgets.map((s) => `${c.label} ${money(s.dailyBudget)}/day for ${s.period}`));
+      add({
+        id: 'ab-budget', area: 'Ads', severity: 'medium', impact: 'high', effort: 'easy',
+        title: `The A/B test arms will not have the same budget on ${uneven.length} test day${uneven.length === 1 ? '' : 's'}`,
+        evidence: `${uneven.map((day) => `${dayLabel(day)}: ${arms.map((c) => `${c.label} ${money(budgetOn(c, day))}`).join(' vs ')}`).join('; ')}${scheduled.length ? ` (scheduled: ${scheduled.join('; ')})` : ''}`,
+        why: 'With a larger budget one arm buys more, and more expensive, impressions, so the comparison is no longer like for like; a 50% budget jump can also restart the learning phase.',
+        action: 'Give both campaigns the same daily budget for every test day: add the same budget schedule to the other campaign, or remove the schedule until the test ends (Campaign > Budget > Budget scheduling).',
+      });
+    }
+  }
+  // Housing special ad category (required for ads about homes for sale reaching the US or Canada).
+  const withSettings = camps.filter((c) => c.campaignSettings);
+  for (const c of withSettings.filter((y) => !y.campaignSettings.specialAdCategories.some((s) => /housing/i.test(s)))) {
+    add({
+      id: 'special-ad-category', area: 'Ads', campaign: c.key, severity: 'high', impact: 'high', effort: 'easy',
+      title: `${label(c.key)}: the campaign does not declare the Housing special ad category`,
+      evidence: `Special ad categories in Ads Manager: ${c.campaignSettings.specialAdCategories.join(', ') || 'none'}`,
+      why: 'Meta requires the Housing category for ads about homes for sale; undeclared housing ads can be rejected and the ad account restricted.',
+      action: 'Campaign > Special ad categories: choose Housing and the countries you advertise in (age, gender and ZIP code targeting become unavailable).',
+    });
+  }
+  if (withSettings.length && withSettings.every((c) => c.campaignSettings.specialAdCategories.some((s) => /housing/i.test(s)))) {
+    add({
+      id: 'special-ad-category-ok', area: 'Ads', severity: 'info', impact: 'low', effort: 'easy', positive: true,
+      title: `Compliance: ${withSettings.length === camps.length ? 'every campaign declares' : `${withSettings.map((c) => c.label).join(' and ')} declare${withSettings.length === 1 ? 's' : ''}`} the Housing special ad category`,
+      evidence: withSettings.map((c) => `${c.label}: ${c.campaignSettings.specialAdCategories.join(', ')} (${c.campaignSettings.specialAdCountries ?? 'countries not shown'})`).join('; '),
+      why: 'Required by Meta for housing ads; it protects the ad account from rejected ads.',
+      action: 'Keep it on every new campaign.',
+    });
   }
   // Optimisation goal: Traffic campaigns optimise for page loads, not for tour requests.
   const traffic = camps.filter((c) => /traffic/i.test(c.settings.campaign?.objective ?? ''));

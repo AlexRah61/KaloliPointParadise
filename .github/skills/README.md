@@ -5,7 +5,7 @@ Workflow skills that Copilot (VS Code chat, Copilot CLI, coding agent) loads on 
 
 | Skill | Use it for |
 |---|---|
-| [ad-funnel-analysis](ad-funnel-analysis/SKILL.md) | Daily or intraday Meta ad → site → GA4 → lead funnel report, per campaign, with day-over-day trend, what works, what doesn't and why |
+| [ad-funnel-analysis](ad-funnel-analysis/SKILL.md) | Daily or intraday Meta ad → site → GA4 → lead funnel report, per campaign, with an executive summary, day-over-day trend, what works, what doesn't and why, recommendations citing platform best practices, and a PDF (with Meta's own charts) filed in `daily ad report/` |
 
 ## Layout and conventions
 
@@ -26,7 +26,9 @@ Workflow skills that Copilot (VS Code chat, Copilot CLI, coding agent) loads on 
 ```
 
 - **Outputs** go to `reports/<skill-name>/<run-id>/` at the repo root (git-ignored). Never write into `src/`, `public/`,
-  `dist/` or `tests/`.
+  `dist/` or `tests/`. The one exception is the shared ad report PDF, which ad-funnel-analysis files in
+  `daily ad report/` at the repo root (committed on purpose; checked for IDs and personal data first). Astro, Wrangler
+  and Playwright never read that folder.
 - **Secrets and IDs**: no tokens are stored. Account IDs live in `*.local.json` files, which are git-ignored because
   this repository is public. Templates (`*.example.json`) document the shape.
 - **Read-only by default**: skills read Meta, GA4, Cloudflare and D1; they never edit ads, settings or data.

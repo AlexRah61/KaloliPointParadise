@@ -32,7 +32,7 @@ test('analyze + report produce funnel.json, markdown, HTML and SVG charts withou
   assert.equal(model.campaigns.length, 2);
   assert.ok(model.findings.length > 0);
   const md = readFileSync(join(dir, 'report.md'), 'utf8');
-  for (const heading of ['## Bottom line', '## Conversion by campaign', '## Scorecard', '## What works', '## What does not work, and why', '## Recommended changes', '## Tracking and data quality', '### Validation checks']) {
+  for (const heading of ['## Executive summary', '## Recommendations', '## Conversion by campaign', '## Scorecard', '## What works', '## What does not work, and why', '## Tracking and data quality', '### Validation checks', '## Sources for the recommendations']) {
     assert.ok(md.includes(heading), `report.md lacks ${heading}`);
   }
   assert.ok(!/NaN|undefined|\[object Object\]/.test(md), 'report.md contains NaN/undefined');

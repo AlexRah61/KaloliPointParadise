@@ -121,3 +121,57 @@ export function parseExperiment(input) {
     arms,
   };
 }
+
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const isoDay = (year, mon, day) => `${year}-${String(MONTHS[mon.slice(0, 3).toLowerCase()]).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+// "Oct 9 – Oct 10" or "Oct 8, 2026, 12:00 AM – Oct 14, 2026, 12:00 AM" -> { from, to } (yyyy-MM-dd); year from the text or `year`.
+export function parseDateSpan(text, year) {
+  const ends = [...String(text ?? '').matchAll(/\b([A-Z][a-z]{2})[a-z]* (\d{1,2})(?:, (\d{4}))?/g)].filter((m) => MONTHS[m[1].toLowerCase()]);
+  if (!ends.length) return null;
+  const [a, b = a] = ends;
+  const from = isoDay(a[3] ?? year, a[1], a[2]);
+  let to = isoDay(b[3] ?? a[3] ?? year, b[1], b[2]);
+  if (to < from && !b[3]) to = isoDay(Number(b[3] ?? a[3] ?? year) + 1, b[1], b[2]);
+  return { from, to };
+}
+
+// Campaign settings: the read-only Review tab (heading, then its values) and the edit panel's budget schedule.
+export function parseCampaignSettings(edit, review, year) {
+  const clean = (input) => (Array.isArray(input) ? input : String(input ?? '').split(/\r?\n/)).map((l) => l.trim()).filter(Boolean);
+  const fields = {};
+  let key = null;
+  for (const line of clean(review)) {
+    const h = line.match(/^\[heading\] (.+)$/);
+    if (h) {
+      key = h[1].trim();
+      fields[key] = [];
+      continue;
+    }
+    if (/^\[button\] Edit$/.test(line)) key = null;
+    const t = line.match(/^\[text\] (.+)$/);
+    if (key && t && t[1].trim()) fields[key].push(t[1].trim());
+  }
+  const value = (k) => (fields[k] ?? []).join(' ').replace(/\s+/g, ' ').trim() || null;
+  const amount = (s) => (s ? Number(s.replace(/,/g, '')) : null);
+  const budget = value('Budget strategy') ?? '';
+  const scheduledBudgets = [];
+  for (const line of clean(edit)) {
+    const m = line.match(/^\[button\] Spend \$([\d,.]+) as the daily budget from (.+?)(?: (Scheduled|Active|In progress|Completed|Ended))?$/i);
+    if (!m) continue;
+    const span = parseDateSpan(m[2], year);
+    scheduledBudgets.push({ dailyBudget: amount(m[1]), period: m[2].trim(), status: m[3] ?? null, from: span?.from ?? null, to: span?.to ?? null });
+  }
+  return {
+    name: fields['Campaign name']?.[0] ?? null,
+    objective: value('Objective'),
+    budgetStrategy: fields['Budget strategy']?.[0] ?? null,
+    dailyBudget: amount(budget.match(/Daily Budget \$([\d,.]+)/i)?.[1]),
+    lifetimeBudget: amount(budget.match(/Lifetime Budget \$([\d,.]+)/i)?.[1]),
+    budgetScheduling: /^Enabled:? Yes/i.test(value('Budget scheduling') ?? ''),
+    scheduledBudgets,
+    bidStrategy: value('Campaign bid strategy'),
+    specialAdCategories: (value('Special Ad Categories') ?? '').split(/,\s*|\s+and\s+/).map((x) => x.trim()).filter((x) => x && !/^none$/i.test(x)),
+    specialAdCountries: value('Special Ad Category countries'),
+  };
+}

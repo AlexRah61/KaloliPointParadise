@@ -22,6 +22,9 @@ placements and creative, not demographic targeting.
 | `pacing` | Budget not spent | Check Delivery column, audience size, bid caps, ad review status |
 | `learning` | Ad set restarted learning after an edit | Do not edit for 48 h unless something is broken |
 | `ab-key-metric` | The A/B test judges on a metric unrelated to buyers | Judge with this report; next test: key metric "Cost per landing page view" or "Cost per lead" |
+| `ab-duration` | The A/B test is shorter than Meta's 7-day minimum | Read its result as directional; schedule the next test for 7+ days (Experiments > Edit schedule changes the reliability of results so far) |
+| `ab-budget` | The test's arms get different budgets on some test days (often a budget schedule on one campaign) | Same daily budget for both campaigns on every test day (Campaign > Budget > Budget scheduling) |
+| `special-ad-category` | A campaign does not declare the Housing special ad category | Campaign > Special ad categories: Housing, with the countries advertised in |
 | `objective-traffic` | Optimising for page loads, not requests | Keep while requests are rare; after 10–20 requests test a Leads campaign on the pixel `Lead` event |
 | `ab-*` (positive) | One ad beats the other beyond chance | Reuse the winner's opening and caption; shift budget once both have 100+ page views |
 | `day-costlier`, `trend-costlier` | Cost per page view rose beyond daily noise | CTR fell: creative fatigue, refresh the opening or rotate a new cut. CPM rose: auction or audience; widen locations or placements. Page loads fell: placements |

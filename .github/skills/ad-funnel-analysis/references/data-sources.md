@@ -3,6 +3,7 @@
 | Source | Collector | How | Time zone |
 |---|---|---|---|
 | Meta Ads | `scripts/collect-meta.ps1` | Temporary window of the signed-in Edge profile: Ads Reporting URL with `time_range`, `metrics`, `breakdowns` → Export → CSV; manage tables (ads, ad sets, campaigns) and A/B test pages read as accessible text | Ad account (`meta.timezone`) |
+| Meta charts and settings | `scripts/collect-meta-insights.ps1` | Temporary Edge window per campaign: Ads Manager insights page (the "View charts" page) with `insights_date`, captured as cropped screenshots; the campaign settings panel's read-only Review tab and budget schedule read as text | Ad account |
 | GA4 | `scripts/collect-ga4.ps1` | Temporary Edge window: Traffic acquisition explorer per funnel event (session campaign, source / medium, channel group) and demographics (city, country) read as accessible text | Property (`ga4.timezone`) |
 | Website | `scripts/collect-site.mjs` | Cloudflare GraphQL `httpRequestsAdaptiveGroups` (page loads, lazy images, film, form API) and `turnstileAdaptiveGroups` (form opened), with the Wrangler login | Converted to the ad account zone |
 | Tour requests | `scripts/collect-leads.mjs` | `wrangler d1 execute --remote --json` with a column list that excludes personal data | UTC timestamps, windowed in the ad account zone |
@@ -19,6 +20,15 @@
 - Manage tables (`/adsmanager/manage/{ads|adsets|campaigns}?columns=…`) give delivery status, budget, bid strategy and
   each ad's URL parameters; the live `utm_campaign` values map GA4 rows to campaigns without manual config.
 - Meta's numbers for today keep changing for a few hours; yesterday is stable by the next morning.
+- Insights page: `/adsmanager/manage/campaigns/insights?act=…&business_id=…&insights_date=START_ENDEXCLUSIVE` lists every
+  campaign with a View button; View adds `selected_campaign_ids`. The page's own date picker is never touched (it is
+  remembered per user). Cards captured per campaign that spent in the window: Performance overview once per metric card
+  (landing page views, cost per landing page view, amount spent), Demographics (age and gender), Platform (placement per
+  platform and device); the A/B test results card once. Crops come from the cards' UI Automation rectangles; the pinned
+  date bar is excluded and a card less than 60% on screen is skipped.
+- Settings: `/adsmanager/manage/campaigns/edit?act=…&selected_campaign_ids=<id>`; the edit panel lists budget schedules
+  ("Spend $15 as the daily budget from Oct 9 – Oct 10"), and its Review tab lists objective, budget, budget scheduling,
+  bid strategy and Special Ad Categories. Scheduled budgets are added to the report's change log.
 
 ## GA4
 

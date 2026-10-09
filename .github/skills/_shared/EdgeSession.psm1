@@ -1,7 +1,7 @@
 # Drive the owner's signed-in Microsoft Edge with Windows UI Automation (no remote debugging, no stored cookies).
 # Every page opens in a NEW temporary window that is closed afterwards. The module reads accessible text, presses
 # buttons and captures images; it never types into pages, so it cannot change settings by accident.
-Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, WindowsBase, System.Drawing
 if (-not ('EdgeSessionNative' -as [type])) {
   Add-Type @'
 using System;
@@ -18,6 +18,23 @@ public static class EdgeSessionNative {
 $script:A = [System.Windows.Automation.AutomationElement]
 $script:CT = [System.Windows.Automation.ControlType]
 $script:TS = [System.Windows.Automation.TreeScope]
+
+# A locked Windows session (lock screen in front) stops Edge from painting and exposing pages, so nothing can be read.
+if (-not ('EdgeSessionDesktop' -as [type])) {
+  Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class EdgeSessionDesktop {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+}
+'@
+}
+function Test-EdgeDesktopLocked {
+  $procId = [uint32]0
+  [void][EdgeSessionDesktop]::GetWindowThreadProcessId([EdgeSessionDesktop]::GetForegroundWindow(), [ref]$procId)
+  (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName -in 'LockApp', 'LogonUI'
+}
 
 function Get-EdgeWindows {
   $cls = New-Object System.Windows.Automation.PropertyCondition($script:A::ClassNameProperty, 'Chrome_WidgetWin_1')
@@ -147,8 +164,9 @@ function Invoke-EdgeElement {
   $false
 }
 
+# -Rect (screen coordinates, as UI Automation reports them) crops the capture to that part of the window.
 function Save-EdgeImage {
-  param([Parameter(Mandatory)]$Window, [Parameter(Mandatory)][string]$Path)
+  param([Parameter(Mandatory)]$Window, [Parameter(Mandatory)][string]$Path, [System.Windows.Rect]$Rect = [System.Windows.Rect]::Empty)
   $r = New-Object EdgeSessionNative+RECT
   [void][EdgeSessionNative]::GetWindowRect($Window.Handle, [ref]$r)
   $bmp = New-Object System.Drawing.Bitmap ($r.Right - $r.Left), ($r.Bottom - $r.Top)
@@ -157,8 +175,22 @@ function Save-EdgeImage {
   [void][EdgeSessionNative]::PrintWindow($Window.Handle, $hdc, 2)
   $g.ReleaseHdc($hdc)
   $g.Dispose()
+  if (-not $Rect.IsEmpty) {
+    $x = [Math]::Max(0, [int]($Rect.X - $r.Left)); $y = [Math]::Max(0, [int]($Rect.Y - $r.Top))
+    $w = [Math]::Min($bmp.Width - $x, [int]$Rect.Width); $h = [Math]::Min($bmp.Height - $y, [int]$Rect.Height)
+    if ($w -lt 10 -or $h -lt 10) { $bmp.Dispose(); throw "Crop $Rect is outside the window" }
+    $crop = $bmp.Clone((New-Object System.Drawing.Rectangle $x, $y, $w, $h), $bmp.PixelFormat)
+    $bmp.Dispose()
+    $bmp = $crop
+  }
   $bmp.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
   $bmp.Dispose()
 }
 
-Export-ModuleMember -Function Get-EdgeWindows, Get-EdgeExe, Show-EdgeWindow, Open-EdgeWindow, Close-EdgeWindow, Get-EdgeAddress, Get-EdgeText, Wait-EdgeText, Find-EdgeElement, Invoke-EdgeElement, Save-EdgeImage
+function Show-EdgeElement {
+  param([Parameter(Mandatory)]$Element, [int]$SettleMs = 1500)
+  try { $Element.GetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern).ScrollIntoView() } catch {}
+  Start-Sleep -Milliseconds $SettleMs
+}
+
+Export-ModuleMember -Function Test-EdgeDesktopLocked, Get-EdgeWindows, Get-EdgeExe, Show-EdgeWindow, Open-EdgeWindow, Close-EdgeWindow, Get-EdgeAddress, Get-EdgeText, Wait-EdgeText, Find-EdgeElement, Invoke-EdgeElement, Save-EdgeImage, Show-EdgeElement
