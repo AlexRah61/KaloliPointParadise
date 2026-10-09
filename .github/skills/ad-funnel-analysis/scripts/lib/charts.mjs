@@ -111,8 +111,8 @@ export function countryChart(campaigns) {
   return frame('country', W, H, 'Where the budget went: share of spend by country', desc, body);
 }
 
-// Today's link clicks by hour per campaign, plus Facebook/Instagram in-app visits seen by the website.
-export function hourlyChart(campaigns, siteHours, nowHour) {
+// Today's link clicks by hour per campaign, yesterday's clicks (all campaigns) and the website's in-app visits.
+export function hourlyChart(campaigns, siteHours, nowHour, yesterdayHours = null) {
   const W = 760;
   const H = 250;
   const left = 40;
@@ -120,11 +120,16 @@ export function hourlyChart(campaigns, siteHours, nowHour) {
   const plotW = W - left - 20;
   const plotH = 150;
   const hours = Array.from({ length: 24 }, (_, h) => h);
-  const max = Math.max(1, ...campaigns.flatMap((c) => c.meta.hours.map((h) => h.clicks)), ...(siteHours ?? []));
+  const max = Math.max(1, ...campaigns.flatMap((c) => c.meta.hours.map((h) => h.clicks)), ...(siteHours ?? []), ...(yesterdayHours ?? []));
   const gw = plotW / 24;
   const bw = Math.max(2, (gw - 4) / Math.max(1, campaigns.length));
   let body = legend(campaigns, left, 40);
-  if (siteHours) body += `<line x1="${left + campaigns.length * 170}" y1="36" x2="${left + campaigns.length * 170 + 16}" y2="36" stroke="#111" stroke-dasharray="3 2"/><text x="${left + campaigns.length * 170 + 20}" y="40" fill="#333">in-app visits (website)</text>`;
+  let lx = left + campaigns.length * 170;
+  if (siteHours) {
+    body += `<line x1="${lx}" y1="36" x2="${lx + 16}" y2="36" stroke="#111" stroke-dasharray="3 2"/><text x="${lx + 20}" y="40" fill="#333">in-app visits</text>`;
+    lx += 110;
+  }
+  if (yesterdayHours) body += `<line x1="${lx}" y1="36" x2="${lx + 16}" y2="36" stroke="#999" stroke-width="2"/><text x="${lx + 20}" y="40" fill="#333">clicks yesterday</text>`;
   body += `<line x1="${left}" y1="${top + plotH}" x2="${W - 20}" y2="${top + plotH}" stroke="#999"/>`;
   hours.forEach((h) => {
     campaigns.forEach((c, ci) => {
@@ -134,10 +139,10 @@ export function hourlyChart(campaigns, siteHours, nowHour) {
     });
     if (h % 3 === 0) body += `<text x="${(left + h * gw + gw / 2).toFixed(1)}" y="${top + plotH + 14}" text-anchor="middle" fill="#666" font-size="10">${h}:00</text>`;
   });
-  if (siteHours) {
-    const pts = siteHours.map((v, h) => `${(left + h * gw + gw / 2).toFixed(1)},${(top + plotH - (v / max) * plotH).toFixed(1)}`).slice(0, nowHour + 1);
-    body += `<polyline points="${pts.join(' ')}" fill="none" stroke="#111" stroke-width="1.5" stroke-dasharray="3 2"/>`;
-  }
+  const line = (values, attrs) =>
+    `<polyline points="${values.map((v, h) => `${(left + h * gw + gw / 2).toFixed(1)},${(top + plotH - (v / max) * plotH).toFixed(1)}`).join(' ')}" fill="none" ${attrs}/>`;
+  if (yesterdayHours) body += line(yesterdayHours, 'stroke="#999" stroke-width="2"');
+  if (siteHours) body += line(siteHours.slice(0, nowHour + 1), 'stroke="#111" stroke-width="1.5" stroke-dasharray="3 2"');
   body += `<text x="${left}" y="${H - 10}" fill="#666" font-size="11">Link clicks per hour today (ad account time zone). Max ${int(max)}.</text>`;
   const desc = campaigns.map((c) => `${c.label}: ${c.meta.hours.map((h) => `${h.key}:00 ${h.clicks}`).join(', ')}`).join('. ');
   return frame('hourly', W, H, 'Today by hour: link clicks and in-app visits', desc, body);
@@ -176,4 +181,54 @@ export function ratesChart(campaigns, benchmarks) {
   body += `<text x="${left}" y="${H - 8}" fill="#666" font-size="11">Dashed line: benchmark (good CTR; minimum healthy page-load and engagement rates).</text>`;
   const desc = campaigns.map((c) => `${c.label}: ${metrics.map((m) => `${m.label} ${pct(c.rates[m.key])}`).join(', ')}`).join('. ');
   return frame('rates', W, H, 'Key rates by campaign', desc, body);
+}
+
+// CTR and cost per landing page view by day, one line per campaign; today's partial day is a hollow point.
+export function trendChart(campaigns, days) {
+  const W = 760;
+  const H = 280;
+  const top = 70;
+  const plotH = 150;
+  const left = 56;
+  const gap = 70;
+  const panelW = (W - left - 30 - gap) / 2;
+  const panels = [
+    { key: 'ctr', title: 'Link CTR', fmt: (v) => pct(v), x0: left },
+    { key: 'costPerLpv', title: 'Cost per landing page view', fmt: (v) => money(v), x0: left + panelW + gap },
+  ];
+  let body = legend(campaigns, left, 42);
+  for (const p of panels) {
+    const values = campaigns.flatMap((c) => c.daily.map((d) => d[p.key])).filter((v) => typeof v === 'number' && Number.isFinite(v));
+    const max = Math.max(0, ...values) * 1.15 || 1;
+    const x = (i) => p.x0 + (days.length === 1 ? panelW / 2 : (i / (days.length - 1)) * panelW);
+    const y = (v) => top + plotH - (v / max) * plotH;
+    body += `<text x="${p.x0}" y="${top - 10}" fill="#333" font-weight="600">${esc(p.title)}</text>`;
+    for (const t of [0, 0.5, 1]) {
+      body += `<line x1="${p.x0}" y1="${y(max * t).toFixed(1)}" x2="${p.x0 + panelW}" y2="${y(max * t).toFixed(1)}" stroke="${t ? '#eee' : '#999'}"/>`;
+      body += `<text x="${p.x0 - 6}" y="${(y(max * t) + 4).toFixed(1)}" text-anchor="end" fill="#666" font-size="10">${p.fmt(max * t)}</text>`;
+    }
+    days.forEach((d, i) => {
+      body += `<text x="${x(i).toFixed(1)}" y="${top + plotH + 14}" text-anchor="middle" fill="#666" font-size="10">${esc(d.slice(5))}</text>`;
+    });
+    campaigns.forEach((c, ci) => {
+      const color = PALETTE[ci % PALETTE.length];
+      const pts = days
+        .map((d, i) => {
+          const row = c.daily.find((r) => r.day === d);
+          const v = row?.[p.key];
+          return typeof v === 'number' && Number.isFinite(v) ? { x: x(i), y: y(v), partial: row.partial } : null;
+        })
+        .filter(Boolean);
+      const full = pts.filter((q) => !q.partial);
+      const part = pts.find((q) => q.partial);
+      if (full.length > 1) body += `<polyline points="${full.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`;
+      if (full.length && part) body += `<line x1="${full.at(-1).x.toFixed(1)}" y1="${full.at(-1).y.toFixed(1)}" x2="${part.x.toFixed(1)}" y2="${part.y.toFixed(1)}" stroke="${color}" stroke-width="2" stroke-dasharray="4 3"/>`;
+      for (const q of pts) body += `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="4" fill="${q.partial ? '#fff' : color}" stroke="${color}" stroke-width="2"/>`;
+    });
+  }
+  body += `<text x="${left}" y="${H - 10}" fill="#666" font-size="11">Hollow point and dashed segment: today so far (partial day). Days in the ad account time zone.</text>`;
+  const desc = campaigns
+    .map((c) => `${c.label}: ${c.daily.map((d) => `${d.day}${d.partial ? ' (partial)' : ''} CTR ${pct(d.ctr)}, cost per page view ${money(d.costPerLpv)}`).join('; ')}`)
+    .join('. ');
+  return frame('trend', W, H, 'Day by day: is each ad getting better?', desc, body);
 }

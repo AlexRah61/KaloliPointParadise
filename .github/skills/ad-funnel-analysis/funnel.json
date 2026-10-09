@@ -41,6 +41,7 @@
     "pendingShareHigh": 0.3,
     "priorityMarketSpendShareMin": 0.5,
     "learningHours": 48,
+    "dayOverDayMinChange": 0.1,
     "pacingLow": 0.6,
     "dataCenterShareHigh": 0.15
   }

@@ -62,6 +62,23 @@ Change thresholds in `funnel.json`, not in code.
 - **Pending allocation**: `(cross-network)` sessions are allocated by landing page view share only for session
   capture; all other GA4 rates use attributed sessions.
 
+## Day over day
+
+The question is "is each ad getting better?", answered with the outcome that matters before requests exist:
+**cost per landing page view** (page views per dollar).
+
+- **Latest complete day vs the day before**, per campaign and in total. Today is never compared with a full day.
+- **Last 3 complete days vs the 3 before** once there are at least 4 complete days (k = min(3, days / 2)).
+- **Today vs yesterday up to the same hour** (last complete hour), from Meta's hourly breakdowns of both days.
+- **Test**: with spend given, page views behave like Poisson counts, so log(cost ratio) has standard error
+  sqrt(1/n1 + 1/n2); |z| > 1.96 is beyond daily noise. The report prints the noise band (about ±30% at 80 page views a
+  day on each side). Moves under 10% (`benchmarks.dayOverDayMinChange`) are "steady".
+- **Drivers**: cost per page view = CPM / (1,000 × page views per impression), so each change is split into the tap
+  rate (CTR, two-proportion z-test), the price (CPM) and page loads per tap.
+- **Website by day**: share of Facebook/Instagram in-app visits that scrolled past the first screen or reached the form
+  (all campaigns together; two-proportion z-test day over day).
+- GA4 is not compared by day: campaign attribution arrives 24–48 hours late, so recent days would look worse.
+
 ## Status labels
 
 Each campaign gets two labels, because a cheap click and a buyer are different questions.

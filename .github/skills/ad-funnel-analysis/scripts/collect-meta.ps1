@@ -39,22 +39,28 @@ function Get-EdgeDownloadDir {
 $act = $site.meta.adAccountId
 $biz = $site.meta.businessId
 $today = Get-ZonedToday $site.meta.timezone
+$yesterday = Add-Day $today -1
 $range = "${Since}_$(Add-Day $Until 1)"
 $todayRange = "${today}_$(Add-Day $today 1)"
+$yesterdayRange = "${yesterday}_$today"
 $downloads = Get-EdgeDownloadDir
 
 # Meta refuses some combinations: hourly cannot be combined with country, age or reach.
+# When = the day(s) that must have delivery in the daily export; exports for days without delivery are skipped.
+$hourly = 'campaign_name,hourly_stats_aggregated_by_advertiser_time_zone'
 $reports = @(
-  [pscustomobject]@{ Name = 'daily'; Breakdowns = 'campaign_name,adset_name,ad_name,days_1'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,actions:offsite_conversion.fb_pixel_lead,spend'; Range = $range },
-  [pscustomobject]@{ Name = 'country'; Breakdowns = 'campaign_name,country'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range },
-  [pscustomobject]@{ Name = 'country-today'; Breakdowns = 'campaign_name,country'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $todayRange },
-  [pscustomobject]@{ Name = 'hourly-today'; Breakdowns = 'campaign_name,hourly_stats_aggregated_by_advertiser_time_zone'; Metrics = 'impressions,inline_link_clicks,actions:landing_page_view,spend'; Range = $todayRange }
+  [pscustomobject]@{ Name = 'daily'; Breakdowns = 'campaign_name,adset_name,ad_name,days_1'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,actions:offsite_conversion.fb_pixel_lead,spend'; Range = $range; When = $null },
+  [pscustomobject]@{ Name = 'country'; Breakdowns = 'campaign_name,country'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range; When = 'any' },
+  [pscustomobject]@{ Name = 'country-today'; Breakdowns = 'campaign_name,country'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $todayRange; When = 'today' },
+  [pscustomobject]@{ Name = 'hourly-today'; Breakdowns = $hourly; Metrics = 'impressions,inline_link_clicks,actions:landing_page_view,spend'; Range = $todayRange; When = 'today' },
+  [pscustomobject]@{ Name = 'hourly-yesterday'; Breakdowns = $hourly; Metrics = 'impressions,inline_link_clicks,actions:landing_page_view,spend'; Range = $yesterdayRange; When = 'yesterday' }
 )
 if (-not $Quick) {
   $reports += @(
-    [pscustomobject]@{ Name = 'region'; Breakdowns = 'campaign_name,country,region'; Metrics = 'impressions,reach,inline_link_clicks,spend'; Range = $range },
-    [pscustomobject]@{ Name = 'age-gender'; Breakdowns = 'campaign_name,age,gender'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range },
-    [pscustomobject]@{ Name = 'platform'; Breakdowns = 'campaign_name,publisher_platform'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range }
+    [pscustomobject]@{ Name = 'country-daily'; Breakdowns = 'campaign_name,country,days_1'; Metrics = 'impressions,inline_link_clicks,actions:landing_page_view,spend'; Range = $range; When = 'any' },
+    [pscustomobject]@{ Name = 'region'; Breakdowns = 'campaign_name,country,region'; Metrics = 'impressions,reach,inline_link_clicks,spend'; Range = $range; When = 'any' },
+    [pscustomobject]@{ Name = 'age-gender'; Breakdowns = 'campaign_name,age,gender'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range; When = 'any' },
+    [pscustomobject]@{ Name = 'platform'; Breakdowns = 'campaign_name,publisher_platform'; Metrics = 'impressions,reach,inline_link_clicks,actions:landing_page_view,spend'; Range = $range; When = 'any' }
   )
 }
 
@@ -101,7 +107,17 @@ function Read-MetaPage([string]$Url, [string]$ReadyPattern, [string]$File) {
 }
 
 $status = New-Object System.Collections.Generic.List[object]
+$deliveryDays = $null
 foreach ($r in $reports) {
+  if ($r.When -and $null -ne $deliveryDays) {
+    $need = switch ($r.When) { 'today' { $today } 'yesterday' { $yesterday } default { $null } }
+    $has = if ($need) { $deliveryDays -contains $need } else { $deliveryDays.Count -gt 0 }
+    if (-not $has) {
+      $status.Add([pscustomobject]@{ name = $r.Name; ok = $true; rows = 0; requested = $r.Range; skipped = 'no delivery' })
+      Write-Host ("meta {0,-16} skipped (no delivery {1})" -f $r.Name, $(if ($need) { "on $need" } else { 'in the window' }))
+      continue
+    }
+  }
   $result = $null
   for ($attempt = 1; $attempt -le 2 -and -not $result; $attempt++) {
     try { $result = Export-MetaReport $r }
@@ -110,7 +126,10 @@ foreach ($r in $reports) {
     }
   }
   $status.Add($result)
-  Write-Host ("meta {0,-13} {1}" -f $r.Name, $(if ($result.ok) { "$($result.rows) rows ($($result.reportingStarts)..$($result.reportingEnds))" } else { "FAILED: $($result.error)" }))
+  Write-Host ("meta {0,-16} {1}" -f $r.Name, $(if ($result.ok) { "$($result.rows) rows ($($result.reportingStarts)..$($result.reportingEnds))" } else { "FAILED: $($result.error)" }))
+  if ($r.Name -eq 'daily' -and $result.ok) {
+    $deliveryDays = @(Import-Csv (Join-Path $metaDir 'daily.csv') | ForEach-Object { $_.Day } | Where-Object { $_ } | Sort-Object -Unique)
+  }
 }
 
 $tables = @(

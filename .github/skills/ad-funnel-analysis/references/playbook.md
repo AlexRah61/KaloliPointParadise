@@ -24,6 +24,9 @@ placements and creative, not demographic targeting.
 | `ab-key-metric` | The A/B test judges on a metric unrelated to buyers | Judge with this report; next test: key metric "Cost per landing page view" or "Cost per lead" |
 | `objective-traffic` | Optimising for page loads, not requests | Keep while requests are rare; after 10–20 requests test a Leads campaign on the pixel `Lead` event |
 | `ab-*` (positive) | One ad beats the other beyond chance | Reuse the winner's opening and caption; shift budget once both have 100+ page views |
+| `day-costlier`, `trend-costlier` | Cost per page view rose beyond daily noise | CTR fell: creative fatigue, refresh the opening or rotate a new cut. CPM rose: auction or audience; widen locations or placements. Page loads fell: placements |
+| `day-cheaper`, `trend-cheaper` (positive) | Cost per page view fell beyond daily noise | Keep the setup; if a change was logged in that time, it worked |
+| `today-*` | Today so far differs from yesterday at the same hour | Context only; wait for the full day |
 
 Budget rules of thumb: compare campaigns on **cost per engaged visit** and **tour-button clicks** until requests exist;
 move budget 70/30 to the leader only when the head-to-head finding is significant; never judge a campaign on less than
@@ -37,6 +40,7 @@ two days or 30 landing page views.
 | `form-friction` | Form started but not sent | Require name + one contact method; make date/time optional with "flexible" pre-selected (form and API schema) |
 | `zero-leads-signal` | Zero requests is no longer bad luck | Offer a lighter step next to the tour button (virtual tour, "text me details", floor plan by email); retarget engaged visitors |
 | `zero-leads-normal` | Too few page views to expect a request | Keep running; watch engaged visits and tour-button clicks |
+| `site-day-better` / `site-day-worse` | More / fewer in-app visitors scrolled past the first screen than the day before | Tie it to the change log: keep a change that helped, revert one that hurt |
 
 Ideas that usually pay off for a single listing (try one at a time, note it in `changes`):
 

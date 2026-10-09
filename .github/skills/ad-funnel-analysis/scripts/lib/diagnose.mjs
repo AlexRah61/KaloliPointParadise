@@ -1,6 +1,7 @@
 // Diagnostics for the funnel model: findings (what works, what does not, why, what to change), per-campaign verdicts and
 // data validation checks. Every rule states its evidence so the marketing team can check it.
 import { addDays, zonedDate, zonedLabel } from '../../../_shared/time.mjs';
+import { sumPeriod } from './daily.mjs';
 import { int, money, pct } from './format.mjs';
 import { binomialCdf } from './stats.mjs';
 
@@ -8,6 +9,38 @@ const IMPACT = { high: 3, medium: 2, low: 1 };
 const EASE = { easy: 3, medium: 2, hard: 1 };
 const share = (part, whole) => (whole > 0 ? part / whole : null);
 const uniqueStrings = (list) => [...new Set(list.filter(Boolean))];
+export const dayLabel = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+export const pText = (t) => (t ? (t.pValue < 0.001 ? '<0.001' : t.pValue.toFixed(t.pValue < 0.01 ? 3 : 2)) : '–');
+export const signedPct = (v) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${pct(Math.abs(v), 0)}`;
+
+// What moved between two periods: tap rate, price per 1,000 impressions and page loads per tap.
+export function drivers(cmp) {
+  const parts = [];
+  if (cmp.ctr) parts.push(`CTR ${pct(cmp.ctr.p2)} → ${pct(cmp.ctr.p1)} (p = ${pText(cmp.ctr)})`);
+  if (cmp.cpmChange !== null) parts.push(`CPM ${money(cmp.earlierRates.cpm)} → ${money(cmp.laterRates.cpm)} (${signedPct(cmp.cpmChange)})`);
+  if (cmp.lpvPerClick) parts.push(`clicks that load the page ${pct(cmp.lpvPerClick.p2, 0)} → ${pct(cmp.lpvPerClick.p1, 0)}`);
+  return parts.join('; ');
+}
+
+function explainCostlier(cmp) {
+  const down = (t) => t && t.pValue < 0.05 && t.p1 < t.p2;
+  if (down(cmp.ctr)) {
+    return {
+      why: 'Fewer people tap the ad: typical ad fatigue once the same audience has seen it a few times.',
+      action: 'Refresh the first 2 seconds or rotate in a new cut; widen the audience if frequency is above 2.',
+    };
+  }
+  if (cmp.cpmChange >= 0.2) {
+    return {
+      why: 'Each 1,000 impressions cost more: more competition in the auction or a smaller audience.',
+      action: 'Check audience size and frequency; widen locations or placements before raising the budget.',
+    };
+  }
+  if (down(cmp.lpvPerClick)) {
+    return { why: 'More taps fail to load the page.', action: 'Check placements (Audience Network) and page speed in the in-app browser.' };
+  }
+  return { why: 'A mix of small moves in tap rate and price, none decisive on its own.', action: 'Watch one more day before changing anything.' };
+}
 
 export function priority(f) {
   return (IMPACT[f.impact] ?? 1) * (EASE[f.effort] ?? 1);
@@ -227,6 +260,45 @@ export function diagnose(model, funnelCfg, campaignsCfg) {
   }
 
   // Account-level rules.
+  // Day over day: only changes beyond daily noise become findings; the report shows every comparison.
+  const changesFrom = (fromDay, toDay) => {
+    const list = (model.changes ?? []).filter((x) => {
+      const d = zonedDate(Date.parse(x.at), model.run.metaTimezone);
+      return d >= fromDay && d <= toDay;
+    });
+    return list.length ? `; changes logged in that time: ${list.map((x) => `${zonedLabel(Date.parse(x.at), model.run.metaTimezone)} ${x.what}`).join('; ')}` : '';
+  };
+  for (const c of camps) {
+    const scopes = [
+      [c.dayOverDay, 'day', (x) => `from ${dayLabel(x.previousDay)} to ${dayLabel(x.latestDay)}`, (x) => [x.previousDay, x.latestDay]],
+      [c.trend, 'trend', (x) => `over the last ${x.recentDays.length} days vs the ${x.beforeDays.length} before`, (x) => [x.beforeDays[0], x.recentDays.at(-1)]],
+      [c.sameTime, 'today', (x) => `today until ${x.untilHour}:00 vs yesterday until ${x.untilHour}:00`, () => [addDays(model.run.metaToday, -1), model.run.metaToday]],
+    ];
+    for (const [cmp, scope, when, span] of scopes) {
+      if (!cmp?.significant) continue;
+      const cheaper = cmp.direction === 'cheaper';
+      const ex = cheaper ? null : explainCostlier(cmp);
+      add({
+        id: `${scope}-${cheaper ? 'cheaper' : 'costlier'}`, area: 'Ads', campaign: c.key, positive: cheaper,
+        severity: cheaper || scope === 'today' ? 'info' : 'medium', impact: 'medium', effort: 'easy',
+        title: `${label(c.key)}: cost per page view ${cheaper ? 'fell' : 'rose'} ${pct(Math.abs(cmp.cost.change), 0)} ${when(cmp)}`,
+        evidence: `${money(cmp.cost.from)} → ${money(cmp.cost.to)} (p = ${pText(cmp.cost)}); ${drivers(cmp)}${changesFrom(...span(cmp))}`,
+        why: cheaper ? 'More taps and page loads for the same money.' : ex.why,
+        action: cheaper ? 'Keep the current setup; if a change was logged in that time, it is working.' : ex.action,
+      });
+    }
+  }
+  const sd = model.site?.dayOverDay;
+  if (sd?.pastHero && sd.pastHero.pValue < 0.05) {
+    const better = sd.pastHero.p1 > sd.pastHero.p2;
+    add({
+      id: better ? 'site-day-better' : 'site-day-worse', area: 'Website', positive: better, severity: better ? 'info' : 'medium', impact: 'medium', effort: 'easy',
+      title: `${better ? 'More' : 'Fewer'} Facebook/Instagram visitors scrolled past the first screen on ${dayLabel(sd.latestDay)} than on ${dayLabel(sd.previousDay)}`,
+      evidence: `${pct(sd.pastHero.p2, 0)} → ${pct(sd.pastHero.p1, 0)} of in-app visits (p = ${pText(sd.pastHero)})${changesFrom(sd.previousDay, sd.latestDay)}`,
+      why: better ? 'The first screen now holds more visitors.' : 'Fewer visitors find a reason to scroll after the latest site or ad change.',
+      action: better ? 'Keep the change.' : 'Compare with the change log and revert or adjust the latest site or creative change.',
+    });
+  }
   // Website: where ad visitors stop (Cloudflare, bots and owner traffic removed) and whether form starters finish.
   const s = model.site?.inApp;
   if (s && s.visits >= 30) {
@@ -402,7 +474,7 @@ export function validate(model, collect) {
     const [from, toExcl] = item.requested.split('_');
     const expected = `${from} … ${addDays(toExcl, -1)}`;
     if (!item.rows) {
-      add(`meta-range-${item.name}`, 'info', `Meta export "${item.name}" covers the requested dates`, `no rows for ${expected} (no delivery yet)`);
+      add(`meta-range-${item.name}`, 'info', `Meta export "${item.name}" covers the requested dates`, item.skipped ? `skipped for ${expected}: no delivery on that day` : `no rows for ${expected}`);
       continue;
     }
     // Meta echoes the requested range in every row, except day breakdowns where each row carries its own day.
@@ -410,14 +482,25 @@ export function validate(model, collect) {
     const ends = (item.reportingEnds ?? '').split(',').filter(Boolean).sort();
     const last = addDays(toExcl, -1);
     const inside = starts.every((s) => s >= from) && ends.every((e) => e <= last);
-    const ok = inside && (item.name === 'daily' || (starts[0] === from && ends.at(-1) === last));
+    const ok = inside && (/daily/.test(item.name) || (starts[0] === from && ends.at(-1) === last));
     add(`meta-range-${item.name}`, ok ? 'pass' : 'warn', `Meta export "${item.name}" covers the requested dates`, `requested ${expected}; file says ${starts[0] ?? '–'} … ${ends.at(-1) ?? '–'}`);
   }
+  // The country export is taken a minute after the daily one; while the window includes today, the ads keep delivering in between.
+  const live = model.run.until >= model.run.metaToday;
   for (const c of model.campaigns) {
     if (c.meta.countries.length) {
       const sums = ['impressions', 'clicks', 'spend'].map((k) => [k, c.meta[k], c.meta.countries.reduce((s, x) => s + x[k], 0)]);
       const bad = sums.filter(([k, a, b]) => !close(a, b, k === 'spend' ? 0.02 : 1));
-      add(`meta-sum-${c.key}`, bad.length ? 'warn' : 'pass', `${c.label}: daily totals match the country breakdown`, sums.map(([k, a, b]) => `${k} ${k === 'spend' ? money(a) : int(a)} vs ${k === 'spend' ? money(b) : int(b)}`).join('; '));
+      const drift = live && bad.length > 0 && bad.every(([, a, b]) => b >= a && b - a <= a * 0.05);
+      const detail = sums.map(([k, a, b]) => `${k} ${k === 'spend' ? money(a) : int(a)} vs ${k === 'spend' ? money(b) : int(b)}`).join('; ');
+      add(`meta-sum-${c.key}`, bad.length && !drift ? 'warn' : 'pass', `${c.label}: daily totals match the country breakdown`, drift ? `${detail}; the country export was taken after the daily one while the ads were delivering, so it includes slightly more` : detail);
+    }
+    const yd = c.daily?.find((d) => d.day === addDays(model.run.metaToday, -1));
+    if (yd && c.meta.hoursYesterday?.length) {
+      const h = sumPeriod(c.meta.hoursYesterday);
+      const sums = ['impressions', 'clicks', 'spend'].map((k) => [k, h[k], yd[k]]);
+      const bad = sums.filter(([k, a, b]) => !close(a, b, k === 'spend' ? 0.02 : 1));
+      add(`meta-hours-${c.key}`, bad.length ? 'warn' : 'pass', `${c.label}: yesterday's hours add up to yesterday's total`, sums.map(([k, a, b]) => `${k} ${k === 'spend' ? money(a) : int(a)} vs ${k === 'spend' ? money(b) : int(b)}`).join('; '));
     }
     const f = c.funnel;
     const order = [];

@@ -5,8 +5,8 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { loadSiteConfig, parseArgs, readJson } from '../../_shared/config.mjs';
 import { datesBetween, zonedLabel } from '../../_shared/time.mjs';
-import { countryChart, dailyChart, funnelChart, hourlyChart, ratesChart } from './lib/charts.mjs';
-import { priority } from './lib/diagnose.mjs';
+import { countryChart, dailyChart, funnelChart, hourlyChart, ratesChart, trendChart } from './lib/charts.mjs';
+import { dayLabel, drivers, pText, priority, signedPct } from './lib/diagnose.mjs';
 import { escapeHtml, escapeMd, int, money, num, pct, signed } from './lib/format.mjs';
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +38,17 @@ const chart = (name, svg, alt) => {
 const est = (c) => (c.ga4?.estimated ? ' (est.)' : '');
 // End a fragment with exactly one full stop.
 const sentence = (s) => `${String(s ?? '').trim().replace(/[.\s]+$/, '')}.`;
+const hourLabel = (hr) => new Date(Date.UTC(2000, 0, 1, hr)).toLocaleTimeString('en-US', { hour: 'numeric', timeZone: 'UTC' });
+const completeDays = (c) => (c.daily ?? []).filter((d) => !d.partial && d.impressions > 0).length;
+const changeText = (cmp) => {
+  if (!cmp?.cost) return 'not comparable (no page views on one side)';
+  const noise = cmp.significant ? 'beyond daily noise' : `within daily noise of ±${pct(cmp.cost.noise, 0)}`;
+  return `**${cmp.direction}**, cost per page view ${money(cmp.cost.from)} → ${money(cmp.cost.to)} (${signedPct(cmp.cost.change)}, ${noise}); ${drivers(cmp)}`;
+};
+const notYet = (c) =>
+  completeDays(c) === 0
+    ? 'the ads started today: tomorrow compares today with yesterday up to the same hour, and full days are compared from the day after'
+    : 'full days are compared from tomorrow; until then see today vs yesterday at the same hour';
 
 // --- Header.
 const when = zonedLabel(Date.parse(m.run.generatedAt), m.run.metaTimezone);
@@ -78,6 +89,24 @@ if (C.length >= 2) {
 }
 const actions = m.findings.filter((f) => !f.positive && f.severity !== 'info');
 if (actions.length) bottom.push(`Top fix: ${sentence(actions[0].action)}`);
+const withDod = C.filter((c) => c.dayOverDay);
+if (withDod.length) {
+  const d = withDod[0].dayOverDay;
+  bottom.push(
+    `Day over day (${dayLabel(d.latestDay)} vs ${dayLabel(d.previousDay)}): ` +
+      withDod.map((c) => `${c.label} ${c.dayOverDay.direction}${c.dayOverDay.significant ? '' : ' (within daily noise)'}, ${signedPct(c.dayOverDay.cost?.change ?? 0)} cost per page view`).join('; ') +
+      '.',
+  );
+} else if (C.some((c) => c.sameTime)) {
+  const hr = hourLabel(C.find((c) => c.sameTime).sameTime.untilHour);
+  bottom.push(
+    `Today until ${hr} vs yesterday until ${hr}: ` +
+      C.filter((c) => c.sameTime).map((c) => `${c.label} ${c.sameTime.direction}${c.sameTime.significant ? '' : ' (within noise)'}, ${signedPct(c.sameTime.cost?.change ?? 0)} cost per page view`).join('; ') +
+      '.',
+  );
+} else if (C.length) {
+  bottom.push(`Day over day: ${completeDays(T)} complete day${completeDays(T) === 1 ? '' : 's'} of delivery so far; ${notYet(T)}.`);
+}
 ul(bottom);
 
 // --- Conversion rates (the three headline conversions per campaign).
@@ -170,18 +199,99 @@ if (m.deltas) {
   table(['Change', ...C.map((c) => c.label), 'Total'], keys.map(([k, name, f]) => [name, ...C.map((c) => (f ?? signed)(m.deltas.campaigns[c.key]?.[k])), (f ?? signed)(m.deltas.total[k])]));
 }
 
-// --- Trend and today.
-h(2, 'Trend');
-const days = datesBetween(m.run.since, m.run.until).filter((d) => C.some((c) => c.meta.days.some((x) => x.key === d)));
-if (days.length) chart('daily', dailyChart(C, days), 'Landing page views per day');
-table(
-  ['Day', ...C.flatMap((c) => [`${c.label} clicks`, `${c.label} page views`, `${c.label} spend`])],
-  days.map((d) => [d, ...C.flatMap((c) => {
-    const x = c.meta.days.find((y) => y.key === d);
-    return [int(x?.clicks ?? 0), int(x?.lpv ?? 0), money(x?.spend ?? 0)];
-  })]),
+// --- Day over day: is each ad getting better?
+h(2, 'Day over day');
+p(
+  'Is each ad getting better? Complete days are compared with complete days in the ad account time zone, and today with yesterday up to the same hour. ' +
+    'One campaign gets only tens of page views a day, so each change is tested; moves inside the daily noise band are labelled as such.',
 );
-if (C.some((c) => c.meta.hours.length)) chart('hourly', hourlyChart(C, m.site?.hoursToday ?? null, Math.floor(m.run.metaNowHour)), 'Today by hour');
+const anyComparison = [...C, T].some((c) => c.dayOverDay || c.trend || c.sameTime);
+if (!anyComparison) p(sentence(`${completeDays(T)} complete day${completeDays(T) === 1 ? '' : 's'} of delivery so far; ${notYet(T)}`));
+ul(
+  anyComparison
+    ? [...C, T].map((c) => {
+        const parts = [];
+        if (c.dayOverDay) parts.push(`${dayLabel(c.dayOverDay.latestDay)} vs ${dayLabel(c.dayOverDay.previousDay)}: ${changeText(c.dayOverDay)}`);
+        if (c.trend) parts.push(`Last ${c.trend.recentDays.length} days vs the ${c.trend.beforeDays.length} before: ${changeText(c.trend)}`);
+        if (c.sameTime) parts.push(`Today until ${hourLabel(c.sameTime.untilHour)} vs yesterday until then: ${changeText(c.sameTime)}`);
+        if (!parts.length) parts.push(`${completeDays(c)} complete day${completeDays(c) === 1 ? '' : 's'} of delivery so far; ${notYet(c)}`);
+        return `**${c.label}**: ${sentence(parts.join('. '))}`;
+      })
+    : [],
+);
+const days = datesBetween(m.run.since, m.run.until).filter((d) => C.some((c) => c.meta.days.some((x) => x.key === d)));
+if (days.length) {
+  chart('trend', trendChart(C, days), 'CTR and cost per landing page view by day');
+  chart('daily', dailyChart(C, days), 'Landing page views per day');
+}
+const prioLabel = (m.priorityMarkets ?? []).join('/') || 'Priority market';
+const hasPrio = [...C, T].some((c) => (c.daily ?? []).some((d) => d.priorityShare !== null));
+table(
+  ['Campaign', 'Day', 'Spend', 'Impressions', 'Clicks', 'CTR', 'Page views', 'Cost / page view', 'CPM', 'Clicks → page', ...(hasPrio ? [`${prioLabel} share of spend`] : []), 'Requests'],
+  [...C, T].flatMap((c) =>
+    (c.daily ?? []).map((d) => [
+      c.label,
+      `${dayLabel(d.day)}${d.partial ? ' (today, so far)' : ''}`,
+      money(d.spend),
+      int(d.impressions),
+      int(d.clicks),
+      pct(d.ctr),
+      int(d.lpv),
+      money(d.costPerLpv),
+      money(d.cpm),
+      pct(d.lpvPerClick, 0),
+      ...(hasPrio ? [pct(d.priorityShare, 0)] : []),
+      int(d.leads),
+    ]),
+  ),
+);
+const same = [...C, T].filter((c) => c.sameTime);
+if (same.length) {
+  const hr = hourLabel(same[0].sameTime.untilHour);
+  h(3, `Today until ${hr} vs yesterday until ${hr}`);
+  const vs = (a, b, f) => `${f(a)} vs ${f(b)}`;
+  table(
+    ['Campaign', 'Spend', 'Impressions', 'Clicks', 'CTR', 'Page views', 'Cost / page view', 'Change in cost / page view'],
+    same.map((c) => {
+      const s = c.sameTime;
+      return [
+        c.label,
+        vs(s.later.spend, s.earlier.spend, money),
+        vs(s.later.impressions, s.earlier.impressions, int),
+        vs(s.later.clicks, s.earlier.clicks, int),
+        vs(s.laterRates.ctr, s.earlierRates.ctr, pct),
+        vs(s.later.lpv, s.earlier.lpv, int),
+        vs(s.laterRates.costPerLpv, s.earlierRates.costPerLpv, money),
+        s.cost ? `${signedPct(s.cost.change)} (p = ${pText(s.cost)})` : '–',
+      ];
+    }),
+  );
+}
+if (m.site?.daily?.length) {
+  h(3, 'Website by day (Facebook and Instagram in-app visits, all campaigns together)');
+  const shareOf = (a, b) => (b ? `${pct(a / b, 0)} (${int(a)})` : '–');
+  table(
+    ['Day', 'Visits', 'Scrolled past the first screen', 'Reached or opened the form', 'Played the film', 'Sent a request'],
+    m.site.daily.map((d) => [`${dayLabel(d.day)}${d.partial ? ' (today, so far)' : ''}`, int(d.visits), shareOf(d.pastHero, d.visits), shareOf(d.formOpened, d.visits), int(d.film), int(d.requestSent)]),
+  );
+  if (m.site.daily.some((d) => d.requestSent > ((T.daily ?? []).find((x) => x.day === d.day)?.leads ?? 0))) {
+    p('"Sent a request" counts every form sent from a Facebook or Instagram in-app visit; the Requests column above counts only stored requests that carry a campaign\'s ad tags, so it can be lower.');
+  }
+  const sd = m.site.dayOverDay;
+  if (sd) p(`Scrolled past the first screen, ${dayLabel(sd.latestDay)} vs ${dayLabel(sd.previousDay)}: ${pct(sd.pastHero.p1, 0)} vs ${pct(sd.pastHero.p2, 0)} (p = ${pText(sd.pastHero)}).`);
+  const ss = m.site.sameTime;
+  if (ss) {
+    p(
+      `Today until ${hourLabel(ss.untilHour)} vs yesterday until then: ${int(ss.later.visits)} vs ${int(ss.earlier.visits)} in-app visits; ` +
+        `${pct(ss.pastHero?.p1, 0)} vs ${pct(ss.pastHero?.p2, 0)} scrolled past the first screen (p = ${pText(ss.pastHero)}).`,
+    );
+  }
+}
+p('GA4 is not compared day by day: it assigns campaign names to sessions 24–48 hours late, so the most recent days would look worse than they are.');
+if (C.some((c) => c.meta.hours.length)) {
+  const yh = T.meta.hoursYesterday?.length ? Array.from({ length: 24 }, (_, hr) => T.meta.hoursYesterday.find((x) => x.key === hr)?.clicks ?? 0) : null;
+  chart('hourly', hourlyChart(C, m.site?.hoursToday ?? null, Math.floor(m.run.metaNowHour), yh), 'Today by hour');
+}
 
 // --- Audience.
 h(2, 'Audience and placements');

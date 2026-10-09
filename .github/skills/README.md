@@ -5,7 +5,7 @@ Workflow skills that Copilot (VS Code chat, Copilot CLI, coding agent) loads on 
 
 | Skill | Use it for |
 |---|---|
-| [ad-funnel-analysis](ad-funnel-analysis/SKILL.md) | Daily or intraday Meta ad → site → GA4 → lead funnel report, per campaign, with what works, what doesn't and why |
+| [ad-funnel-analysis](ad-funnel-analysis/SKILL.md) | Daily or intraday Meta ad → site → GA4 → lead funnel report, per campaign, with day-over-day trend, what works, what doesn't and why |
 
 ## Layout and conventions
 

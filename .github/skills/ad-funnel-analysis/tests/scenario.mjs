@@ -144,3 +144,34 @@ export function inputs(funnelCfg) {
     site,
   };
 }
+
+// Three days of delivery (two complete + today so far): Video A gets cheaper, Video B gets costlier as its CTR drops.
+const multiDaily = metaCsv(DAILY_HEADER, [
+  [...R('Campaign A', '2025-12-31'), 900, 1000, 10, 9, '', 9, '2025-12-31', '2025-12-31'],
+  [...R('Campaign A', '2026-01-01'), 900, 1000, 20, 18, '', 5, '2026-01-01', '2026-01-01'],
+  [...R('Campaign A', '2026-01-02'), 550, 600, 12, 10, '', 3, '2026-01-02', '2026-01-02'],
+  [...R('Campaign B', '2025-12-31'), 900, 1000, 30, 27, '', 5, '2025-12-31', '2025-12-31'],
+  [...R('Campaign B', '2026-01-01'), 900, 1000, 10, 9, '', 5, '2026-01-01', '2026-01-01'],
+  [...R('Campaign B', '2026-01-02'), 450, 500, 6, 6, '', 2, '2026-01-02', '2026-01-02'],
+]);
+const hourlyYesterday = metaCsv(HOURLY_HEADER, [
+  ['Campaign A', '08:00:00 - 08:59:59', 400, 8, 7, 2, '2026-01-01', '2026-01-01'],
+  ['Campaign A', '14:00:00 - 14:59:59', 600, 12, 11, 3, '2026-01-01', '2026-01-01'],
+  ['Campaign B', '09:00:00 - 09:59:59', 500, 5, 5, 2.5, '2026-01-01', '2026-01-01'],
+  ['Campaign B', '15:00:00 - 15:59:59', 500, 5, 4, 2.5, '2026-01-01', '2026-01-01'],
+]);
+export const multiDayFiles = {
+  ...files,
+  'run.json': JSON.stringify({ ...run, runId: '2026-01-02T1230', since: '2025-12-31' }),
+  'meta/daily.csv': multiDaily,
+  'meta/hourly-yesterday.csv': hourlyYesterday,
+};
+export function multiDayInputs(funnelCfg) {
+  const base = inputs(funnelCfg);
+  const rows = (csv) => normalizeMetaRows(parseCsv(csv));
+  return {
+    ...base,
+    run: { ...base.run, since: '2025-12-31', windowStartUtc: '2025-12-31T08:00:00.000Z' },
+    meta: { ...base.meta, daily: rows(multiDaily), hourlyYesterday: rows(hourlyYesterday) },
+  };
+}

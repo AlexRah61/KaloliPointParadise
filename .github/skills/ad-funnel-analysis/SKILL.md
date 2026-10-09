@@ -1,6 +1,6 @@
 ---
 name: ad-funnel-analysis
-description: 'End-to-end ad funnel report for the property website: Meta Ads (impressions, reach, link clicks, CTR, landing page views, spend, country/region/placement, A/B test) -> GA4 (sessions, engagement, tour-button clicks, form starts per campaign) -> website behaviour (Cloudflare in-app visits, scroll depth, form opens) -> stored tour requests (D1 leads). Produces per-campaign CTR, ad-to-website and page-view-to-lead conversion, cost per lead, charts, what works / what does not and why, prioritised high-value fixes, deltas since the last run and validation checks. Use when asked how the ads are doing, for an ad or campaign performance report, funnel or conversion analysis, which ad works, Meta vs GA4 numbers, cost per lead, or to run the ad report daily or several times a day.'
+description: 'End-to-end ad funnel report for the property website: Meta Ads (impressions, reach, link clicks, CTR, landing page views, spend, country/region/placement, A/B test) -> GA4 (sessions, engagement, tour-button clicks, form starts per campaign) -> website behaviour (Cloudflare in-app visits, scroll depth, form opens) -> stored tour requests (D1 leads). Produces per-campaign CTR, ad-to-website and page-view-to-lead conversion, cost per lead, day-over-day comparison (is each ad getting better?), charts, what works / what does not and why, prioritised high-value fixes, deltas since the last run and validation checks. Use when asked how the ads are doing, for an ad or campaign performance report, funnel or conversion analysis, which ad works, whether the ads improve day by day, Meta vs GA4 numbers, cost per lead, or to run the ad report daily or several times a day.'
 ---
 
 # Ad funnel analysis
@@ -45,12 +45,15 @@ inline charts), `charts/*.svg`, `funnel.json` (full model), and the raw inputs (
 
 Read `report.md` and answer in this order, keeping the report's numbers exactly:
 
-1. **Bottom line**: spend, clicks, landing page views, tour requests; each campaign's status.
+1. **Bottom line**: spend, clicks, landing page views, tour requests; each campaign's status; the day-over-day verdict.
 2. **Conversion by campaign**: CTR, ad → website (landing page views / clicks), page view → tour request, cost per
    request, with the 95% ranges when volumes are small.
-3. **What works / what does not and why** (from the findings, with their evidence).
-4. **Top 3 changes** from the recommended-changes table (each: where to click, why, effort, impact).
-5. **Since the last report** when present, and any validation check that is WARN or FAIL.
+3. **Day over day**: is each ad getting better? Latest complete day vs the day before (and the last 3 days vs the 3
+   before once there are 4+ days), today vs yesterday up to the same hour, with what drove the change (CTR, CPM, page
+   loads) and whether it is beyond daily noise. Say plainly when a move is within noise.
+4. **What works / what does not and why** (from the findings, with their evidence).
+5. **Top 3 changes** from the recommended-changes table (each: where to click, why, effort, impact).
+6. **Since the last report** when present, and any validation check that is WARN or FAIL.
 
 Link `report.html` and the chart files. State estimates as estimates (shared UTM splits, GA4 "pending" sessions).
 

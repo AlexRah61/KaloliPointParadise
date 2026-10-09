@@ -119,6 +119,20 @@ test('website rules fire on first-screen exits and unfinished forms', () => {
   assert.match(form.evidence, /0 of 11 has a 2% chance/);
 });
 
+test('the country check allows a little more delivery in the later export only while the ads run', () => {
+  const m = model();
+  const status = () => validate(m, { sources: {} }).find((c) => c.id === 'meta-sum-a');
+  const country = m.campaigns[0].meta.countries[0];
+  country.spend += 0.25; // $8.00 -> $8.25 arrived between the daily and the country export
+  assert.equal(status().status, 'pass');
+  assert.match(status().detail, /taken after the daily one while the ads were delivering/);
+  m.run.until = '2026-01-01'; // a window that ended yesterday cannot change between exports
+  assert.equal(status().status, 'warn');
+  m.run.until = '2026-01-02';
+  country.spend -= 0.5; // less in the later export is a real mismatch
+  assert.equal(status().status, 'warn');
+});
+
 test('validation passes on consistent inputs and deltas compare runs with the same window', () => {
   const m = model();
   const checks = validate(m, {

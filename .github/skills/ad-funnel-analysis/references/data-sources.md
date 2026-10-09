@@ -11,8 +11,10 @@
 
 - Reporting URLs: `adsmanager.facebook.com/adsmanager/reporting/view?act=…&business_id=…&time_range=START_ENDEXCLUSIVE&metrics=…&breakdowns=…`.
   `date=` is ignored by Reporting; `time_range` end is exclusive.
-- Exports: `daily` (campaign, ad set, ad, day), `country`, `country-today`, `hourly-today`; full runs add `region`,
-  `age-gender` and `platform`. The hourly breakdown cannot be combined with country, age or reach.
+- Exports: `daily` (campaign, ad set, ad, day), `country`, `country-today`, `hourly-today`, `hourly-yesterday`; full runs
+  add `country-daily`, `region`, `age-gender` and `platform`. The hourly breakdown cannot be combined with country, age
+  or reach. Exports for a day without delivery in the daily export are skipped (nothing to export; saves a minute each).
+- `hourly-yesterday` is checked against yesterday's row in the daily export (hours must add up to the day).
 - `Reporting starts/ends` in each CSV is checked against the requested range (daily rows carry their own day).
 - Manage tables (`/adsmanager/manage/{ads|adsets|campaigns}?columns=…`) give delivery status, budget, bid strategy and
   each ad's URL parameters; the live `utm_campaign` values map GA4 rows to campaigns without manual config.

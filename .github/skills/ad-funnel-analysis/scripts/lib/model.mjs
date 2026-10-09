@@ -1,5 +1,6 @@
 // Build the per-campaign funnel model from collected inputs. Pure (no I/O) so it can be unit-tested with fixtures.
-import { offsetMs } from '../../../_shared/time.mjs';
+import { addDays, offsetMs } from '../../../_shared/time.mjs';
+import { dayOverDay, dayRates, recentTrend, sameTimeYesterday, siteDaily, siteDayOverDay, siteSameTime } from './daily.mjs';
 import { summarizeVisits } from './site.mjs';
 import { mergeEventTables } from './ga4.mjs';
 import { chanceOfZero, ratio, triesForEvidence, twoProportion, wilson } from './stats.mjs';
@@ -302,6 +303,36 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
     const days = e.meta.days.filter((d) => d.key !== run.metaToday).length + (e.meta.days.some((d) => d.key === run.metaToday) ? (run.metaNowHour ?? 24) / 24 : 0);
     e.pacing = e.dailyBudget && days > 0 ? { budget: e.dailyBudget * days, spend: e.meta.spend, ratio: e.meta.spend / (e.dailyBudget * days), days } : null;
   }
+
+  // --- Day over day: per-day rows, latest complete day vs the one before, recent days vs earlier days, and today
+  // vs yesterday until the same hour.
+  const minChange = funnelCfg.benchmarks.dayOverDayMinChange ?? 0.1;
+  const prio = campaignsCfg.priorityMarkets ?? [];
+  const leadDay = (r) => new Date(Date.parse(r.created_at) + offsetMs(Date.parse(r.created_at), tz)).toISOString().slice(0, 10);
+  const dailyRows = (days, countryRows, leadRows) =>
+    days.map((d) => {
+      const cd = countryRows.filter((r) => r.day === d.key);
+      const cdSpend = sum(cd, 'spend');
+      return {
+        day: d.key,
+        partial: d.key === run.metaToday,
+        impressions: d.impressions,
+        reach: d.reach,
+        clicks: d.clicks,
+        lpv: d.lpv,
+        spend: d.spend,
+        leads: leadRows.filter((r) => leadDay(r) === d.key).length,
+        priorityShare: cd.length && cdSpend > 0 ? sum(cd.filter((r) => prio.includes(r.country)), 'spend') / cdSpend : null,
+        ...dayRates(d),
+      };
+    });
+  for (const e of entities) {
+    e.daily = dailyRows(e.meta.days, (meta?.countryDaily ?? []).filter((r) => r.campaign === e.metaCampaign), leadInfo.rows.filter((r) => r.campaign === e.key));
+    e.meta.hoursYesterday = rollup((meta?.hourlyYesterday ?? []).filter((r) => r.campaign === e.metaCampaign), 'hour').sort((a, b) => a.key - b.key);
+    e.dayOverDay = dayOverDay(e.daily, run.metaToday, minChange);
+    e.trend = recentTrend(e.daily, run.metaToday, minChange);
+    e.sameTime = sameTimeYesterday(e.meta.hours, e.meta.hoursYesterday, run.metaNowHour, minChange);
+  }
   const active = entities.filter((e) => e.meta.impressions > 0 || e.ga4.sessions > 0 || e.leads.count > 0);
 
   // --- Account total (all campaigns + pending + leads that cannot be attributed to one campaign).
@@ -333,6 +364,18 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
     meta: totalMeta,
     intervals: { ctr: wilson(totalFunnel.clicks, totalFunnel.impressions), lpvToLead: wilson(totalFunnel.leads, totalFunnel.lpv) },
   };
+  const allDays = rollup(active.flatMap((e) => e.meta.days.map((d) => ({ ...d, day: d.key }))), 'day').sort((x, y) => x.key.localeCompare(y.key));
+  const hoursOf = (k) => rollup(active.flatMap((e) => e.meta[k]), 'key').sort((x, y) => x.key - y.key);
+  total.daily = dailyRows(
+    allDays,
+    (meta?.countryDaily ?? []).filter((r) => active.some((e) => e.metaCampaign === r.campaign)),
+    leadInfo.rows.filter((r) => r.campaign),
+  );
+  total.meta.hours = hoursOf('hours');
+  total.meta.hoursYesterday = hoursOf('hoursYesterday');
+  total.dayOverDay = dayOverDay(total.daily, run.metaToday, minChange);
+  total.trend = recentTrend(total.daily, run.metaToday, minChange);
+  total.sameTime = sameTimeYesterday(total.meta.hours, total.meta.hoursYesterday, run.metaNowHour, minChange);
 
   // --- Head-to-head between the two biggest campaigns.
   const [a, b] = [...active].sort((x, y) => y.meta.spend - x.meta.spend);
@@ -352,6 +395,7 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
   const order = site?.sections ?? [];
   const visits = site?.visits ?? [];
   const inApp = visits.filter((v) => v.source === 'facebook' || v.source === 'instagram');
+  const siteDays = site ? siteDaily(inApp, run.metaToday) : null;
   const siteBlock = site
     ? {
         window: site.window,
@@ -363,6 +407,10 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
         depth: order.map((s) => ({ section: s, visits: inApp.filter((v) => v.depth === s).length })),
         today: summarizeVisits(inApp.filter((v) => v.day === run.metaToday), order, funnelCfg.site?.engagedDepth),
         hoursToday: Array.from({ length: 24 }, (_, h) => inApp.filter((v) => v.day === run.metaToday && v.hour === h).length),
+        hoursYesterday: Array.from({ length: 24 }, (_, h) => inApp.filter((v) => v.day === addDays(run.metaToday, -1) && v.hour === h).length),
+        daily: siteDays,
+        dayOverDay: siteDays && siteDayOverDay(siteDays),
+        sameTime: siteSameTime(inApp, run.metaToday, addDays(run.metaToday, -1), run.metaNowHour),
         excluded: site.excluded,
         crawlers: site.crawlers,
         turnstile: site.turnstile,
@@ -377,6 +425,7 @@ export function buildModel({ run, funnelCfg, campaignsCfg, meta, ga4, leads, sit
     run,
     campaigns: active.map(({ matchers, ...e }) => e),
     unconfigured: active.filter((e) => !e.configured).map((e) => e.metaCampaign),
+    priorityMarkets: campaignsCfg.priorityMarkets ?? [],
     total,
     comparison,
     ga4: {
